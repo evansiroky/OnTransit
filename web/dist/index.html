@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title></title>
+    <script src="main.js"></script>
+    <link rel="stylesheet" href="main.css">
+  </head>
+  <body>
+    <div id="pageone" data-role="page">
+      <div data-role="header">
+        <h1>Page One</h1>
+      </div>
+      <div data-role="main" style="font-size:large" class="ui-content">
+        <h1>Welcome to the browserify-shim jquery mobile Example</h1>
+        <p>You are using jQuery version:</p><span id="jq-version"></span>
+        <p>Click button to test <code>$.mobile.changePage('#pagetwo')</code></p>
+        <button data-foo="#pagetwo" class="ui-btn">Go to Page Two</button>
+      </div>
+      <div data-role="footer">
+        <h1>Footer Text</h1>
+      </div>
+    </div>
+    <div id="pagetwo" data-role="page">
+      <div data-role="header">
+        <h1>Page Two</h1>
+      </div>
+      <div data-role="main" style="font-size:large" class="ui-content">
+        <p>Success! <code>$.mobile.changePage('#pagetwo')</code> ran successfully.</p>
+        <button data-foo="#pageone" class="ui-btn">Go to Page One</button>
+      </div>
+      <div data-role="footer">
+        <h1>Footer Text</h1>
+      </div>
+    </div>
+  </body>
+</html>
