@@ -1,0 +1,67 @@
+{
+  "name": "ontransit",
+  "version": "0.1.0",
+  "description": "A mobile website for use while you're on a transit vehicle.",
+  "main": "node/index.js",
+  "keywords": [
+    "transit"
+  ],
+  "author": "Evan Siroky",
+  "license": "MIT",
+  "dependencies": {
+    "browserify": "^10.2.4",
+    "browserify-shim": "^3.8.8",
+    "concat": "^1.0.0",
+    "fs-extra": "^0.18.4",
+    "jade": "^1.10.0",
+    "jquery": "^2.1.4",
+    "jquery-mobile": "^1.4.1",
+    "parallelshell": "^1.1.1",
+    "rimraf": "^2.3.4",
+    "stylus": "^0.51.1",
+    "watch": "^0.16.0"
+  },
+  "scripts": {
+    "clean": "rimraf dist/*",
+    "prebuild": "npm run clean -s",
+    "prebuild-dev": "npm run prebuild",
+    "prebuild:css": "stylus styles/app.styl -o dist/app.css",
+    "build:css": "node node/build_css.js",
+    "postbuild:css": "rimraf dist/app.css",
+    "build:js": "browserify js/index.js > dist/main.js",
+    "build:html": "jade jade/index.jade -o dist",
+    "build:html-dev": "jade jade/index.jade -P -o dist",
+    "build": "npm run build:js && npm run build:html && npm run build:css",
+    "build-dev": "npm run build:js && npm run build:html-dev && npm run build:css",
+    "build-dev:watch": "parallelshell \"npm run watch:js\" \"npm run watch:css\" \"npm run watch:html-dev\"",
+    "watch:js": "watch \"npm run build:js\" js",
+    "watch:css": "watch \"npm run build:css\" styles",
+    "watch:html-dev": "watch \"npm run build:html-dev\" jade"
+  },
+  "browser": {
+    "jquery": "./node_modules/jquery/dist/jquery.min.js",
+    "jquery-mobile": "./node_modules/jquery-mobile/dist/jquery.mobile.min.js"
+  },
+  "browserify": {
+    "transform": [
+      "browserify-shim"
+    ]
+  },
+  "browserify-shim": {
+    "jquery": "$",
+    "jquery-mobile": {
+      "exports": "$.mobile",
+      "depends": [
+        "jquery:$"
+      ]
+    }
+  },
+  "css_build": {
+    "in_files": [
+      "styles/resets.css",
+      "node_modules/jquery-mobile/dist/jquery.mobile.css",
+      "dist/app.css"
+    ],
+    "out_file": "dist/main.css"
+  }
+}
