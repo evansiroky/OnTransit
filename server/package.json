@@ -1,0 +1,20 @@
+{
+  "name": "ontransit-server",
+  "version": "0.1.0",
+  "description": "Server for OnTransit mobile website.",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "keywords": [
+    "transit"
+  ],
+  "author": "Evan Siroky",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.13.3",
+    "express-routescan": "^0.2.1",
+    "is-my-json-valid": "^2.12.1",
+    "query-types": "^0.1.4"
+  }
+}
