@@ -1,4 +1,8 @@
-var validator = require('is-my-json-valid');
+var validator = require('is-my-json-valid'),
+  config = require('../config'),
+  GTFSWorker = require('../lib/gtfsWorker.js');
+
+var gtfsWorker = GTFSWorker('pgWeb');
 
 var validateTripStopsJSON = validator({
   type: 'object',
@@ -26,12 +30,24 @@ var validateTripStopsJSON = validator({
   verbose: true
 });
 
+var calculateTripDelay = function(req, res) {
+  // body...
+}
+
+var getTripStops = function(req, res) {
+  // body...
+}
+
 var tripService = function(req, res) {
   var valid = validateTripStopsJSON(req.query);
   if(!valid) {
     res.send(validateTripStopsJSON.errors);
   } else {
-    res.send(req.query);
+    if(config.crowdsourceDelay) {
+      calculateTripDelay(req, res);
+    } else {
+      getTripStops(req, res);
+    }
   }
 };
 

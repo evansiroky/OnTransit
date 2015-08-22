@@ -66,4 +66,4 @@ web/node_modules
 server/node_modules
 
 #secrets
-server/passwords
+server/config
