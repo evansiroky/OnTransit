@@ -25,6 +25,16 @@ module.exports = function(pgUser) {
     db.daily_trip = DailyTrip;
     db.trip_delay = TripDelay;
 
+    db.shape_gis.hasMany(db.daily_trip, {
+      foreignKey: 'shape_id'
+    });
+
+    Object.keys(db).forEach(function(modelName) {
+      if ("associate" in db[modelName]) {
+        db[modelName].associate(db);
+      }
+    });
+
     db.close = function() {
       db.sequelize.close();
     }

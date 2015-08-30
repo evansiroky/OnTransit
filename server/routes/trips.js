@@ -29,7 +29,8 @@ var validateTripJSON = validator({
 
 var findTrips = function(req, res) {
   // find all trips close to a given lat/lon at the current datetime
-  var now = moment(),
+  //var now = moment(),
+  var now = moment('2015-08-28 12'),
     nowDate = now.toDate(),
     db = gtfsWorker.getConnection();
 
@@ -38,8 +39,11 @@ var findTrips = function(req, res) {
     coordinates: [req.query.lon, req.query.lat],
     crs: { type: 'name', properties: { name: 'EPSG:4326'} }
   },
-    pointGeom = 'ST_GeomFromGeoJSON(' + JSON.stringify(point) + ')',
-    distanceFn = 'ST_DISTANCE(geom, ' + pointGeom + ')';
+    pointGeom = db.sequelize.fn('ST_GeomFromGeoJSON', JSON.stringify(point) ),
+    pointGeog = "ST_GeomFromGeoJSON('" + JSON.stringify(point) + "')::geography",
+    distanceFn = db.sequelize.fn('ST_Distance', 
+      db.sequelize.literal('"shape_gi"."geom"::geography'), 
+      db.sequelize.literal(pointGeog));
 
   db.daily_trip.findAll({
     where: {
@@ -50,31 +54,38 @@ var findTrips = function(req, res) {
         gte: nowDate
       }
     },
-    includes: [
+    include: [
       {
         model: db.shape_gis,
-        attributes: [db.Sequelize.literal(distanceFn), 'distance'],
-        where: {
-          distance: {
-            lte: 400
-          }
-        }
+        attributes: [[distanceFn, 'distance']],
+        where: db.sequelize.fn('ST_DWithin',
+          db.sequelize.literal('"shape_gi"."geom"::geography'),
+          db.sequelize.literal(pointGeog),
+          400)
       }, 
       db.route
     ],
     order: [
-      //['distance', 'ASC'],
-      //['route_short_name', 'ASC'],
+      [distanceFn, 'ASC'],
+      [db.route, 'route_short_name', 'ASC'],
       ['start_datetime', 'ASC']
     ],
     logging: console.log
   }).then(function(trips) {
-    db.close();
     res.send({
       success: true,
       trips: trips
     });
+  }).catch(function(errors) {
+    res.send({
+      success: false,
+      error: 'Database error finding trips.'
+    });
+    throw errors;
+  }).finally(function() {
+    db.close();
   });
+  
 };
 
 var tripService = function(req, res) {

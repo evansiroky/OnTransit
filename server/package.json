@@ -15,7 +15,7 @@
     "async": "^1.4.2",
     "express": "^4.13.3",
     "express-routescan": "^0.2.1",
-    "gtfs-sequelize": "^0.2.1",
+    "gtfs-sequelize": "^0.2.2",
     "is-my-json-valid": "^2.12.1",
     "moment": "^2.10.6",
     "moment-timezone": "^0.4.0",
