@@ -25,11 +25,11 @@ describe('ontransit-server', function() {
 
   });
 
-  describe('server http requests', function() {
+  describe('webservices', function() {
 
     this.timeout(5000);
 
-    it('main page', function() {
+    it('index.html', function() {
 
       return rp('http://localhost:1234/').then(function(data) {
         assert(data.indexOf('src="main.js"') > -1);
@@ -38,7 +38,7 @@ describe('ontransit-server', function() {
 
     });
 
-    it('trip webservice', function() {
+    it('trips', function() {
 
       return rp({
         uri: 'http://localhost:1234/trips',
@@ -48,12 +48,13 @@ describe('ontransit-server', function() {
         }
       }).then(function(data) {
         var jdata = JSON.parse(data);
+        assert(jdata.success);
         assert(jdata.trips.length > 0);
       });
 
     });
 
-    it('tripStops webservice', function() {
+    it('tripStops', function() {
 
       return rp({
         uri: 'http://localhost:1234/tripStops',
@@ -65,7 +66,9 @@ describe('ontransit-server', function() {
         }
       }).then(function(data) {
         var jdata = JSON.parse(data);
-        assert(jdata.trips.length > 0);
+        console.log(jdata);
+        assert(jdata.success);
+        assert(jdata.stops.length > 0);
       });
 
     });

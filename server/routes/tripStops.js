@@ -15,16 +15,16 @@ var validateTripStopsJSON = validator({
     },
     lat: {
       type: 'number',
-      minimum: -180,
+      minimum: -90,
       exclusiveMinimum: true,
-      maximum: 180,
+      maximum: 90,
       exclusiveMaximum: true
     },
     lon: {
       type: 'number',
-      minimum: -90,
+      minimum: -180,
       exclusiveMinimum: true,
-      maximum: 90,
+      maximum: 180,
       exclusiveMaximum: true
     }
   },
@@ -43,9 +43,19 @@ var calculateTripDelay = function(req, res, db) {
     coordinates: [req.query.lon, req.query.lat],
     crs: { type: 'name', properties: { name: 'EPSG:4326'} }
   },
-    pointGeom = 'ST_GeomFromGeoJSON(' + JSON.stringify(point) + ')',
-    locatePointFn = 'ST_LineLocatePoint(' + pointGeom + ')',
-    distanceFn = 'ST_Distance(geom, ' + pointGeom + ')';
+    pointGeom = db.sequelize.fn('ST_GeomFromGeoJSON', JSON.stringify(point) ),
+    pointGeog = "ST_GeomFromGeoJSON('" + JSON.stringify(point) + "')::geography",
+    lineGeomAlias = db.sequelize.literal('"shape_gi"."geom"'),
+    locatePointFn = db.sequelize.fn('ST_LineLocatePoint', 
+      lineGeomAlias,
+      pointGeom),
+    /*lineFractionAlias = db.sequelize.literal('"shape_gi.line_fraction"'),
+    interpolateFn = db.sequelize.fn('ST_LineInterpolatePoint', 
+      lineGeomAlias,
+      lineFractionAlias),*/
+    distanceFn = db.sequelize.fn('ST_Distance', 
+      db.sequelize.literal('"shape_gi"."geom"::geography'), 
+      db.sequelize.literal(pointGeog));
 
   db.trip.findOne({
     where: {
@@ -54,17 +64,20 @@ var calculateTripDelay = function(req, res, db) {
     include: [{
         model: db.shape_gis,
         attributes: [
-          [db.Sequelize.literal(locatePointFn), 'line_fraction'],
-          [db.Sequelize.literal('ST_LineInterpolatePoint(line_fraction)'), 'point_on_line'],
-          [db.Sequelize.literal(distanceFn), 'distance']
+          [locatePointFn, 'line_fraction'],
+          //[interpolateFn, 'point_on_line'],
+          [distanceFn, 'distance']
         ]
       }, {
         model: db.route,
         include: [db.agency]
       }
-    ]
+    ],
+    //logging: console.log
   }).then(function(trip) {
-    if(trip.distance > 400) {
+    console.log('trip delay');
+    console.log(trip.shape_gi.dataValues);
+    if(trip.shape_gi.dataValues.distance > 400) {
       getDelay(req, res, db, 'Submitted point is too far from route to calculate delay.');
     } else {
       // distance to trip is acceptable, calculate approximate deviation
@@ -72,6 +85,8 @@ var calculateTripDelay = function(req, res, db) {
       // calculate current seconds after midnight
 
       // calculate closest two stop_times with departure_times near current seconds after midnight
+
+      getTripStops(req, res, db, 0, 'Delay has been calculated based on your position.');
     }
   });
 }
@@ -111,6 +126,9 @@ var getTripStops = function(req, res, db, delay, delayMsg) {
         }]
       },
       db.stop 
+    ],
+    order: [
+      ['stop_sequence', 'ASC']
     ]
   }).then(function(stopTimes) {
     applyDelay(req, res, stopTimes, delay, delayMsg);
@@ -129,6 +147,7 @@ var applyDelay = function(req, res, stopTimes, delay, delayMsg) {
       name: stopTimes[i].stop.stop_name,
       scheduled_departure: moment(tripDate).add(stopTimes[i].departure_time, 'seconds')
     }
+    // TODO: calculate times for stops without departure_time
     stops.push(stop);
   };
 
