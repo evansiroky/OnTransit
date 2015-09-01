@@ -1,0 +1,34 @@
+{
+  "name": "ontransit-server",
+  "version": "0.1.0",
+  "description": "Server for OnTransit mobile website.",
+  "main": "index.js",
+  "scripts": {
+    "load-gtfs": "node scripts/load.js",
+    "test-all": "npm run test-db-load && npm run test-webservices",
+    "test-db-load": "mocha tests/testLoad.js",
+    "test-webservices": "mocha tests/testWebservices.js"
+  },
+  "keywords": [
+    "transit"
+  ],
+  "author": "Evan Siroky",
+  "license": "MIT",
+  "dependencies": {
+    "async": "^1.4.2",
+    "express": "^4.13.3",
+    "gtfs-sequelize": "^0.2.3",
+    "is-my-json-valid": "^2.12.1",
+    "js-priority-queue": "^0.1.2",
+    "moment": "^2.10.6",
+    "moment-timezone": "^0.4.0",
+    "pg": "^4.4.1",
+    "pg-hstore": "^2.3.2",
+    "query-types": "^0.1.4"
+  },
+  "devDependencies": {
+    "mocha": "^2.2.5",
+    "q": "^1.4.1",
+    "request-promise": "^0.4.3"
+  }
+}
