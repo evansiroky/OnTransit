@@ -1,23 +1,8 @@
-var GTFS = require('gtfs-sequelize'),
-  format = require('string-format'),
-  config = require('../config');
+var GTFS = require('gtfs-sequelize');
 
-var gtfsConfig = {
-  gtfsUrl: 'http://feed.rvtd.org/googleFeeds/static/google_transit.zip',
-  downloadsDir: 'downloads',
-  gtfsFilename: 'google_transit.zip',
-  isPostGIS: true,
-  sequelizeOptions: {
-    logging: false
-  }
-};
-
-module.exports = function(pgUser) {
-  gtfsConfig.database = format('postgres://{0}:{1}@localhost:5432/gtfs-rvtd', 
-    config[pgUser].username, 
-    config[pgUser].password);
+module.exports = function(dbconfig) {
   
-  var worker = GTFS(gtfsConfig);
+  var worker = GTFS(dbconfig);
   worker.getConnection = function() {
     var db = worker.connectToDatabase(),
       DailyTrip = db.sequelize.import('../models/dailyTrip.js'),

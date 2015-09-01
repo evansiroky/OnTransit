@@ -4,7 +4,10 @@
   "description": "Server for OnTransit mobile website.",
   "main": "index.js",
   "scripts": {
-    "load-gtfs": "node scripts/load.js"
+    "load-gtfs": "node scripts/load.js",
+    "test-all": "npm run test-db-load && npm run test-webservices",
+    "test-db-load": "mocha tests/testLoad.js",
+    "test-webservices": "mocha tests/testWebservices.js"
   },
   "keywords": [
     "transit"
@@ -14,14 +17,17 @@
   "dependencies": {
     "async": "^1.4.2",
     "express": "^4.13.3",
-    "express-routescan": "^0.2.1",
-    "gtfs-sequelize": "^0.2.2",
+    "gtfs-sequelize": "^0.2.3",
     "is-my-json-valid": "^2.12.1",
     "moment": "^2.10.6",
     "moment-timezone": "^0.4.0",
     "pg": "^4.4.1",
     "pg-hstore": "^2.3.2",
-    "query-types": "^0.1.4",
-    "string-format": "^0.5.0"
+    "query-types": "^0.1.4"
+  },
+  "devDependencies": {
+    "mocha": "^2.2.5",
+    "q": "^1.4.1",
+    "request-promise": "^0.4.3"
   }
 }

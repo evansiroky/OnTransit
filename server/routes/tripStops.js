@@ -1,9 +1,7 @@
 var validator = require('is-my-json-valid'),
-  config = require('../config'),
   moment = require('moment-timezone'),
-  GTFSWorker = require('../lib/gtfsWorker.js');
-
-var gtfsWorker = GTFSWorker('pgWeb');
+  GTFSWorker = require('../lib/gtfsWorker.js'),
+  gtfsWorker;
 
 var validateTripStopsJSON = validator({
   type: 'object',
@@ -142,20 +140,23 @@ var applyDelay = function(req, res, stopTimes, delay, delayMsg) {
   });
 }
 
-var tripService = function(req, res) {
-  var valid = validateTripStopsJSON(req.query);
-  if(!valid) {
-    res.send(validateTripStopsJSON.errors);
-  } else {
-    db = gtfsWorker.getConnection();
-    if(config.crowdsourceDelay) {
-      calculateTripDelay(req, res, db);
+var tripStopService = function(app, config) {
+
+  gtfsWorker = GTFSWorker(config.pgWeb);
+
+  app.get('/tripStops', function(req, res) {
+    var valid = validateTripStopsJSON(req.query);
+    if(!valid) {
+      res.send(validateTripStopsJSON.errors);
     } else {
-      getDelay(req, res, db);
+      db = gtfsWorker.getConnection();
+      if(config.crowdsourceDelay) {
+        calculateTripDelay(req, res, db);
+      } else {
+        getDelay(req, res, db);
+      }
     }
-  }
+  });
 };
 
-module.exports = {
-  '/tripStops': tripService
-}; 
+module.exports = tripStopService;

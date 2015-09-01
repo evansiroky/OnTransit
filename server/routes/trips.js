@@ -1,8 +1,7 @@
 var validator = require('is-my-json-valid'),
   moment = require('moment-timezone'),
-  GTFSWorker = require('../lib/gtfsWorker.js');
-
-var gtfsWorker = GTFSWorker('pgWeb');
+  GTFSWorker = require('../lib/gtfsWorker.js'),
+  gtfsWorker;
 
 var validateTripJSON = validator({
   type: 'object',
@@ -30,7 +29,7 @@ var validateTripJSON = validator({
 var findTrips = function(req, res) {
   // find all trips close to a given lat/lon at the current datetime
   //var now = moment(),
-  var now = moment('2015-08-28 12'),
+  var now = moment(),
     nowDate = now.toDate(),
     db = gtfsWorker.getConnection();
 
@@ -43,7 +42,8 @@ var findTrips = function(req, res) {
     pointGeog = "ST_GeomFromGeoJSON('" + JSON.stringify(point) + "')::geography",
     distanceFn = db.sequelize.fn('ST_Distance', 
       db.sequelize.literal('"shape_gi"."geom"::geography'), 
-      db.sequelize.literal(pointGeog));
+      db.sequelize.literal(pointGeog)),
+    distanceAlias = db.sequelize.literal('"shape_gi.distance"');
 
   db.daily_trip.findAll({
     where: {
@@ -66,11 +66,10 @@ var findTrips = function(req, res) {
       db.route
     ],
     order: [
-      [distanceFn, 'ASC'],
+      [distanceAlias, 'ASC'],
       [db.route, 'route_short_name', 'ASC'],
       ['start_datetime', 'ASC']
-    ],
-    logging: console.log
+    ]
   }).then(function(trips) {
     res.send({
       success: true,
@@ -88,15 +87,19 @@ var findTrips = function(req, res) {
   
 };
 
-var tripService = function(req, res) {
-  var valid = validateTripJSON(req.query);
-  if(!valid) {
-    res.send(validateTripJSON.errors);
-  } else {
-    findTrips(req, res);
-  }
+var tripService = function(app, config) {
+
+  gtfsWorker = GTFSWorker(config.pgWeb);
+
+  app.get('/trips', function(req, res) {
+    var valid = validateTripJSON(req.query);
+    if(!valid) {
+      res.send(validateTripJSON.errors);
+    } else {
+      findTrips(req, res);
+    }
+  });
+
 };
 
-module.exports = {
-  '/trips': tripService
-}; 
+module.exports = tripService;
