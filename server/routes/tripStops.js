@@ -1,5 +1,6 @@
-var validator = require('is-my-json-valid'),
-  moment = require('moment-timezone'),
+var moment = require('moment-timezone'),
+  PriorityQueue = require('js-priority-queue'),
+  validator = require('is-my-json-valid'),
   GTFSWorker = require('../lib/gtfsWorker.js'),
   util = require('../lib/util.js'),
   gtfsWorker;
@@ -46,10 +47,6 @@ var calculateTripDelay = function(req, res, db) {
     locatePointFn = db.sequelize.fn('ST_LineLocatePoint', 
       lineGeomAlias,
       pointGeom),
-    /*lineFractionAlias = db.sequelize.literal('"shape_gi.line_fraction"'),
-    interpolateFn = db.sequelize.fn('ST_LineInterpolatePoint', 
-      lineGeomAlias,
-      lineFractionAlias),*/
     distanceFn = db.sequelize.fn('ST_Distance', 
       db.sequelize.literal('"shape_gi"."geom"::geography'), 
       db.sequelize.literal(pointGeog));
@@ -72,18 +69,117 @@ var calculateTripDelay = function(req, res, db) {
     ],
     //logging: console.log
   }).then(function(trip) {
-    console.log('trip delay');
-    console.log(trip.shape_gi.dataValues);
+    
     if(trip.shape_gi.dataValues.distance > 400) {
       getDelay(req, res, db, 'Submitted point is too far from route to calculate delay.');
     } else {
       // distance to trip is acceptable, calculate approximate deviation
 
-      // calculate current seconds after midnight
+      db.stop_time.findAll({
+        attributes: [
+          'departure_time',
+          'arrival_time',
+          [db.sequelize.fn('ST_LineLocatePoint',
+              db.sequelize.literal('"trip.shape_gi"."geom"'),
+              db.sequelize.literal('"stop"."geom"')),
+            'line_fraction']
+        ],
+        where: {
+          trip_id: req.query.trip_id
+        },
+        include: [{
+            model: db.trip,
+            include: [{
+                model: db.route,
+                include: [db.agency]
+              }, 
+              db.shape_gis,
+            ]
+          },
+          db.stop 
+        ],
+        order: [
+          ['stop_sequence', 'ASC']
+        ],
+        //logging: console.log
+      }).then(function(stopTimes) {
 
-      // calculate closest two stop_times with departure_times near current seconds after midnight
+        // calculate current seconds after midnight
+        var userLineFraction = trip.shape_gi.dataValues.line_fraction,
+          tripTz = stopTimes[0].trip.route.agency.agency_timezone,
+          tripDate = moment.tz(req.query.trip_date, tripTz),
+          now = moment().tz(tripTz),
+          nowSeconds = now.hours() * 3600 + now.minutes() * 60 + now.seconds();
 
-      getTripStops(req, res, db, 0, 'Delay has been calculated based on your position.');
+        if(now.diff(tripDate, 'days') > 0) {
+          nowSeconds += 86400;
+        }
+
+        // find closest 2 stop_times to userPosition
+
+        // create priority queue to sort stop proximities
+        var stopPriorityQueue = new PriorityQueue({
+          comparator: function(a, b) {
+            return a.fractionDeviation - b.fractionDeviation;
+          }
+        });
+
+        // push stops with known departure times into priority queue
+        for (var i = 0; i < stopTimes.length; i++) {
+          var stop = stopTimes[i];
+          if(!stop.departure_time) {
+            stop.departure_time = stop.arrival_time;
+          }
+
+          if(!stop.arrival_time) {
+            stop.arrival_time = stop.departure_time;
+          }
+
+          if(stop.departure_time) {
+
+            stop.fractionDeviation = Math.abs(userLineFraction - stop.dataValues.line_fraction);
+
+            stopPriorityQueue.queue(stop);
+
+          }
+
+        }
+
+        // grab two closest stops
+        var closestStop = stopPriorityQueue.dequeue(),
+          nextClosestStop = stopPriorityQueue.dequeue(),
+          previousStop, nextStop;
+
+        // sort the two based on sequence
+        if(closestStop.dataValues.line_fraction > nextClosestStop.dataValues.line_fraction) {
+          previousStop = nextClosestStop;
+          nextStop = closestStop;
+        } else {
+          previousStop = closestStop;
+          nextStop = nextClosestStop;
+        }
+
+        // ensure line fraction is not out of the range of found stops
+        userLineFraction = Math.min(nextStop.dataValues.line_fraction, userLineFraction);
+        userLineFraction = Math.max(previousStop.dataValues.line_fraction, userLineFraction);
+
+        // delay calculation
+        var fractionOfTravel = nextStop.dataValues.line_fraction - previousStop.dataValues.line_fraction,
+          secondsOfTravel = nextStop.arrival_time - previousStop.departure_time,
+          travelFromPreviousStop = userLineFraction - previousStop.dataValues.line_fraction,
+          pctOfTravel = travelFromPreviousStop / fractionOfTravel,
+          pointSeconds = Math.round(pctOfTravel * secondsOfTravel + previousStop.departure_time),
+          delay = nowSeconds - pointSeconds;
+
+        // insert delay in DB
+        db.trip_delay.upsert({
+          trip_id: req.query.trip_id,
+          seconds_of_delay: delay
+        }).then(function() {
+          applyDelay(req, res, userLineFraction, 
+            stopTimes, delay, 'Delay has been calculated based on your position.');
+        });
+      });
     }
   });
 }
@@ -231,7 +327,7 @@ var tripStopService = function(app, config) {
       res.send(validateTripStopsJSON.errors);
     } else {
       db = gtfsWorker.getConnection();
-      if(!config.crowdsourceDelay) {
+      if(config.crowdsourceDelay) {
         calculateTripDelay(req, res, db);
       } else {
         getDelay(req, res, db);

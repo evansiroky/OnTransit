@@ -178,9 +178,10 @@ module.exports = function(dbconfig, loaderCallback) {
       'trip_delay'];
 
     var grantWorker = async.queue(function(table, queueCallback) {
-      db.sequelize.query('GRANT SELECT ON TABLE ' + table + ' TO GROUP "' + dbconfig.webUsername + '"').catch(function(err) {
+      db.sequelize.query('GRANT SELECT ON TABLE ' + table + ' TO GROUP "' + dbconfig.webUsername + '"').then(function() {
+        queueCallback();
+      }).catch(function(err) {
         console.log(err.message);
-      }).then(function() {
         queueCallback();
       });
     });
@@ -189,7 +190,9 @@ module.exports = function(dbconfig, loaderCallback) {
       grantWorker.push(tables[i]);
     };
     grantWorker.drain = function() {
-      seriesCallback();
+      db.sequelize.query('GRANT SELECT, INSERT, UPDATE ON TABLE trip_delay TO GROUP "' + dbconfig.webUsername + '"').then(function() {
+        seriesCallback();
+      });
     }
   }
 
