@@ -1,5 +1,5 @@
 {
-  "name": "ontransit",
+  "name": "ontransit-web",
   "version": "0.1.0",
   "description": "A mobile website for use while you're on a transit vehicle.",
   "main": "node/index.js",
