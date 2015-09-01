@@ -1,6 +1,7 @@
 var validator = require('is-my-json-valid'),
   moment = require('moment-timezone'),
   GTFSWorker = require('../lib/gtfsWorker.js'),
+  util = require('../lib/util.js'),
   gtfsWorker;
 
 var validateTripJSON = validator({
@@ -33,13 +34,8 @@ var findTrips = function(req, res) {
     nowDate = now.toDate(),
     db = gtfsWorker.getConnection();
 
-  var point = {
-    type: 'POINT',
-    coordinates: [req.query.lon, req.query.lat],
-    crs: { type: 'name', properties: { name: 'EPSG:4326'} }
-  },
-    pointGeom = db.sequelize.fn('ST_GeomFromGeoJSON', JSON.stringify(point) ),
-    pointGeog = "ST_GeomFromGeoJSON('" + JSON.stringify(point) + "')::geography",
+  var point = util.makePoint(req.query.lat, req.query.lon),
+    pointGeog = util.makePointGeog(point),
     distanceFn = db.sequelize.fn('ST_Distance', 
       db.sequelize.literal('"shape_gi"."geom"::geography'), 
       db.sequelize.literal(pointGeog)),

@@ -7,4 +7,20 @@ util.sendGenericError = function(res) {
   });
 }
 
+util.makePoint = function(lat, lon) {
+  return {
+    type: 'POINT',
+    coordinates: [lon, lat],
+    crs: { type: 'name', properties: { name: 'EPSG:4326'} }
+  }
+}
+
+util.makePointGeom = function(sequelize, point) {
+  return sequelize.fn('ST_GeomFromGeoJSON', JSON.stringify(point) );
+}
+
+util.makePointGeog = function(point) {
+  return "ST_GeomFromGeoJSON('" + JSON.stringify(point) + "')::geography";
+}
+
 module.exports = util;
