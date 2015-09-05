@@ -9,6 +9,7 @@
   "author": "Evan Siroky",
   "license": "MIT",
   "dependencies": {
+    "backbone": "^1.2.3",
     "browserify": "^10.2.4",
     "browserify-shim": "^3.8.8",
     "concat": "^1.0.0",
@@ -19,6 +20,7 @@
     "parallelshell": "^1.1.1",
     "rimraf": "^2.3.4",
     "stylus": "^0.51.1",
+    "uglify-js": "^2.4.24",
     "watch": "^0.16.0"
   },
   "scripts": {
@@ -29,12 +31,14 @@
     "build:css": "node node/build_css.js",
     "postbuild:css": "rimraf dist/app.css",
     "build:js": "browserify js/index.js > dist/main.js",
+    "postbuild:js": "uglifyjs dist/main.js -o dist/main.js",
+    "build:js-dev": "browserify js/index.js > dist/main.js",
     "build:html": "jade jade/index.jade -o dist",
     "build:html-dev": "jade jade/index.jade -P -o dist",
     "build": "npm run build:js && npm run build:html && npm run build:css",
     "build-dev": "npm run build:js && npm run build:html-dev && npm run build:css",
     "build-dev:watch": "parallelshell \"npm run watch:js\" \"npm run watch:css\" \"npm run watch:html-dev\"",
-    "watch:js": "watch \"npm run build:js\" js",
+    "watch:js": "watch \"npm run build:js-dev\" js",
     "watch:css": "watch \"npm run build:css\" styles",
     "watch:html-dev": "watch \"npm run build:html-dev\" jade"
   },

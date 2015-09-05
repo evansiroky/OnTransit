@@ -67,3 +67,6 @@ server/node_modules
 
 #secrets
 server/config
+
+#web build folder
+web/dist

@@ -5,27 +5,5 @@ html(lang="en")
     script(src='main.js')
     link(rel="stylesheet" href="main.css")
   body
-    #pageone(data-role='page')
-      div(data-role='header')
-        h1 Page One
-      
-      div(data-role="main" class="ui-content" style="font-size:large")
-        h1 Welcome to the browserify-shim jquery mobile Example
-        p You are using jQuery version:
-        span#jq-version
-        p Click button to test <code>$.mobile.changePage('#pagetwo')</code>
-        button.ui-btn(data-foo="#pagetwo") Go to Page Two
-      
-      div(data-role="footer")
-        h1 Footer Text
-      
-    #pagetwo(data-role="page")
-      div(data-role="header")
-        h1 Page Two
-
-      .ui-content(data-role="main" style="font-size:large")
-        p Success! <code>$.mobile.changePage('#pagetwo')</code> ran successfully.
-        button.ui-btn(data-foo="#pageone") Go to Page One
-
-      div(data-role="footer")
-        h1 Footer Text
+    include home.jade
+    include vehicles.jade
