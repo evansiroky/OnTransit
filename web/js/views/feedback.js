@@ -6,5 +6,5 @@ module.exports = function(app) {
     el: '#feedback'
   });
 
-  return FeedbackView;
+  return new FeedbackView();
 }

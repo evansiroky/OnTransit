@@ -27,9 +27,12 @@
     "clean": "rimraf dist/*",
     "prebuild": "npm run clean -s",
     "prebuild-dev": "npm run prebuild",
-    "prebuild:css": "stylus styles/app.styl -o dist/app.css",
+    "prebuild:css-dev": "stylus styles/ -o dist/",
+    "prebuild:css": "stylus styles/ -c -o dist/",
     "build:css": "node node/build_css.js",
-    "postbuild:css": "rimraf dist/app.css",
+    "build:css-dev": "node node/build_css.js",
+    "postbuild:css": "node node/post_build_css.js",
+    "postbuild:css-dev": "node node/post_build_css.js",
     "build:js": "browserify js/index.js > dist/main.js",
     "postbuild:js": "uglifyjs dist/main.js -o dist/main.js",
     "build:js-dev": "browserify js/index.js > dist/main.js",
@@ -37,10 +40,10 @@
     "build:html-dev": "jade jade/index.jade -P -o dist",
     "build": "npm run build:js && npm run build:html && npm run build:css",
     "build-dev": "npm run build:js && npm run build:html-dev && npm run build:css",
-    "build-dev:watch": "parallelshell \"npm run watch:js\" \"npm run watch:css\" \"npm run watch:html-dev\"",
+    "build-dev:watch": "parallelshell \"npm run watch:js\" \"npm run watch:css\" \"npm run watch:html\"",
     "watch:js": "watch \"npm run build:js-dev\" js",
-    "watch:css": "watch \"npm run build:css\" styles",
-    "watch:html-dev": "watch \"npm run build:html-dev\" jade"
+    "watch:css": "watch \"npm run build:css-dev\" styles",
+    "watch:html": "watch \"npm run build:html-dev\" jade"
   },
   "browser": {
     "jquery": "./node_modules/jquery/dist/jquery.min.js",
@@ -63,8 +66,7 @@
   "css_build": {
     "in_files": [
       "styles/resets.css",
-      "node_modules/jquery-mobile/dist/jquery.mobile.css",
-      "dist/app.css"
+      "node_modules/jquery-mobile/dist/jquery.mobile.min.css"
     ],
     "out_file": "dist/main.css"
   }

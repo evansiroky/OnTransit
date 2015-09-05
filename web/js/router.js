@@ -13,22 +13,22 @@ module.exports = function(app) {
     },
 
     home: function() {
-      //console.log('router home');
+      console.log('router home');
       this.changePage('#home');
     },
 
     findVehicle: function() {
-      //console.log('router findVehicle');
+      console.log('router findVehicle');
       this.changePage('#find_vehicle');
     },
 
     tripDetails: function() {
-      //console.log('router tripDetails');
+      console.log('router tripDetails');
       this.changePage('#find_vehicle');
     },
 
     feedback: function() {
-      //console.log('router feedback');
+      console.log('router feedback');
       this.changePage('#find_vehicle');
     },
 

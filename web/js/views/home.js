@@ -6,16 +6,16 @@ module.exports = function(app) {
     el: '#home',
 
     events: {
-      "click #find_vehicles": "findVehiclesClick"
+      'click #find_vehicles': 'findVehiclesClick'
     },
 
     findVehiclesClick: function() {
-      console.log('findVehiclesClick');
       app.router.navigate('findVehicle/', { trigger: true });
     },
 
-    render: function() {
-
+    initialize: function() {
+      var menuView = require('./leftNavMenuView.js')(app);
+      this.menuView = new menuView({el: '#home .left_nav_panel'});
     }
 
   });
