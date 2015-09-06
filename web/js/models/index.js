@@ -6,15 +6,28 @@ module.exports = function(app) {
   app.models.trip = require('./trip.js');
   app.models.stop = require('./stop.js');
 
-  app.collections = {};
-  app.collections.trips = Backbone.Collection.extend({
+  var TripCollection = Backbone.Collection.extend({
     model: app.models.trip,
-    url: 'trips'
+    parse: function(response, options) {
+      return response.trips;
+    },
+    url: function() {
+      return '/trips';
+    }
   });
-  
-  app.collections.stops = Backbone.Collection.extend({
+
+  var StopCollection = Backbone.Collection.extend({
     model: app.models.stop,
-    url: 'tripStops'
+    parse: function(response, options) {
+      return response.stops;
+    },
+    url: function() {
+      return '/tripStops';
+    }
   });
+
+  app.collections = {};
+  app.collections.trips = new TripCollection();
+  app.collections.stops = new StopCollection();
 
 }

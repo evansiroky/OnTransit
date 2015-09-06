@@ -1,0 +1,11 @@
+#trip_details(data-role='page')
+  div(data-role='header')
+    a.ui-btn-icon-left(data-icon='bars', href='#trip_details_left_nav_panel') Menu
+    h1 Trip Details
+
+  div#trip_details_left_nav_panel.left_nav_panel(data-role='panel')
+    include ../widget/leftPanel.jade
+
+  .ui-content(data-role='main')
+    h2#trip_details_trip_delay
+    ul#trip_details_stop_list(data-role='listview')

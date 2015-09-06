@@ -14,9 +14,9 @@ $(document).on("pageinit", function () {
 
     var app = {};
 
-    require('./router.js')(app);
     require('./views')(app);
     require('./models')(app);
+    require('./router.js')(app);
 
     firstLoad = false;
   }

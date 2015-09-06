@@ -6,11 +6,11 @@ module.exports = function(app) {
     el: '#home',
 
     events: {
-      'click #find_vehicles': 'findVehiclesClick'
+      'click #home_find_trips_button': 'findTripsClick'
     },
 
-    findVehiclesClick: function() {
-      app.router.navigate('findVehicle/', { trigger: true });
+    findTripsClick: function() {
+      app.router.navigate('findTrips/', { trigger: true });
     },
 
     initialize: function() {

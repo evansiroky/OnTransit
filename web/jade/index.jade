@@ -1,12 +1,29 @@
+mixin if(name)
+  != '{{#' + name + '}}'
+  block
+  != '{{/' + name + '}}'
+
+mixin unless(name)
+  != '{{^' + name + '}}'
+  block
+  != '{{/' + name + '}}'
+
+mixin each(name)
+  != '{{#' + name + '}}'
+  block
+  != '{{/' + name + '}}'
+
 doctype html
 html(lang="en")
   head
     title=OnTransit
+    meta(name='viewport', content='width=device-width, initial-scale=1')
     script(src='main.js')
     link(rel="stylesheet" href="main.css")
   body
     include page/home.jade
-    include page/vehicles.jade
-    //
-      include page/tripStops.jade
-      include page/feedback.jade
+    include page/findTrips.jade
+    include page/tripDetails.jade
+    // include page/feedback.jade
+
+    include template/tripListItem.jade

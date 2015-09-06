@@ -6,7 +6,7 @@ module.exports = function(app) {
 
     events: {
       'click .left_nav_home': 'homeClick',
-      'click .left_nav_find_vehicles': 'findVehiclesClick',
+      'click .left_nav_find_trips': 'findTripsClick',
       'click .left_nav_feedback': 'feedbackClick'
     },
 
@@ -15,9 +15,9 @@ module.exports = function(app) {
       app.router.navigate('', { trigger: true });
     },
 
-    findVehiclesClick: function() {
+    findTripsClick: function() {
       //console.log('findVehiclesClick');
-      app.router.navigate('findVehicle/', { trigger: true });
+      app.router.navigate('findTrips/', { trigger: true });
     },
 
     feedbackClick: function() {

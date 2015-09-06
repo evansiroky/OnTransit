@@ -1,0 +1,7 @@
+script#tripListItemTemplate(type='text/tempalte')
+  +each('trips')
+    li.trip_list_item(id='trip_list_item_{{id}}')
+      a
+        h2 {{title}}
+        p {{timing}}
+        p Distance: {{distance}} feet

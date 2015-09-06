@@ -7,8 +7,8 @@ module.exports = function(app) {
 
     routes: {
       "": "home",
-      "findVehicle/": "findVehicle",
-      "tripDetails/": "tripDetails",
+      "findTrips/": "findTrips",
+      "tripDetails/:trip_id": "tripDetails",
       "feedback/": "feedback"
     },
 
@@ -17,14 +17,16 @@ module.exports = function(app) {
       this.changePage('#home');
     },
 
-    findVehicle: function() {
-      console.log('router findVehicle');
-      this.changePage('#find_vehicle');
+    findTrips: function() {
+      console.log('router findTrips');
+      this.changePage('#find_trips');
+      app.views.findTrips.locateNearbyTrips();
     },
 
-    tripDetails: function() {
+    tripDetails: function(tripId) {
       console.log('router tripDetails');
       this.changePage('#find_vehicle');
+      app.views.tripDetails.getTripStops();
     },
 
     feedback: function() {
