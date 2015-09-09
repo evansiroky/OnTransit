@@ -1,4 +1,8 @@
-var Backbone = require('Backbone');
+var $ = require('jquery'),
+  _ = require('underscore'),
+  Backbone = require('Backbone'),
+  moment = require('moment'),
+  Mustache = require('Mustache');
 
 module.exports = function(app) {
   
@@ -6,7 +10,7 @@ module.exports = function(app) {
     el: '#trip_details',
 
     getTripStops: function() {
-
+      console.log('getTripStops');
     },
 
     initialize: function() {

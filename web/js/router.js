@@ -13,28 +13,29 @@ module.exports = function(app) {
     },
 
     home: function() {
-      console.log('router home');
+      //console.log('router home');
       this.changePage('#home');
     },
 
     findTrips: function() {
-      console.log('router findTrips');
+      //console.log('router findTrips');
       this.changePage('#find_trips');
       app.views.findTrips.locateNearbyTrips();
     },
 
     tripDetails: function(tripId) {
-      console.log('router tripDetails');
-      this.changePage('#find_vehicle');
+      //console.log('router tripDetails');
+      this.changePage('#trip_details');
       app.views.tripDetails.getTripStops();
     },
 
     feedback: function() {
-      console.log('router feedback');
-      this.changePage('#find_vehicle');
+      //console.log('router feedback');
+      this.changePage('#feedback');
     },
 
     changePage: function(el) {
+      //console.log('change', el);
       $("body").pagecontainer("change", $(el), { reverse: false, changeHash: false });
     }
 

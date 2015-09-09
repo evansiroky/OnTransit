@@ -85,7 +85,8 @@ module.exports = function(app) {
 
     onTransit: function() {
       $("#find_trips_confirm_onboard").popup('close');
-      app.router.navigate('tripDetails/' + this.curTripTarget.attr('id').replace('trip_list_item_', ''), 
+      app.router.navigate('tripDetails/' + 
+        this.curTripTarget.attr('id').replace('trip_list_item_', ''), 
         { trigger: true });
     },
 
@@ -117,7 +118,7 @@ module.exports = function(app) {
           route = trip.get('route');
         tripList.push({
           distance: Math.round(trip.get('shape_gi').distance * 3.28084),
-          id: trip.get('trip_id'),
+          id: trip.get('trip_composite_id'),
           timing: 'Start: ' + tripStart + '  End: ' + tripEnd,
           title: route.route_short_name + ' - ' + route.route_long_name + ' - ' + trip.get('trip_headsign')
         })

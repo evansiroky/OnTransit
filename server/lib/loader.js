@@ -114,8 +114,8 @@ module.exports = function(dbconfig, loaderCallback) {
             serviceCallback();
           });
         },
-        serviceDefCallback);
-
+        serviceDefCallback
+      );
     };
 
     // find valid service ids plus or minus 1 day from now
