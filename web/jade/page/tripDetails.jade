@@ -9,3 +9,20 @@
   .ui-content(data-role='main')
     h2#trip_details_trip_delay
     ul#trip_details_stop_list(data-role='listview')
+
+  div(data-role="footer" data-position="fixed")
+    div(data-role="navbar")
+      ul
+        li
+          a#trip_details_footer_refresh(data-icon="refresh") Refresh
+        li
+          a#trip_details_footer_feedback(data-icon="comment") Send Feedback
+
+  #trip_details_problem(data-role='popup' data-dismissable='false')
+    p#trip_details_error_message
+    a.ui-btn.ui-corner-all.ui-shadow.ui-btn-inline(data-rel='back') OK
+
+  #trip_details_feedback(data-role='popup' data-dismissable='false')
+    p Select the type of feedback you want to submit:
+    button.ui-btn#trip_details_feedback_agency_button Transit Service Feedback
+    button.ui-btn#trip_details_feedback_app_button App Feedback

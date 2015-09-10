@@ -23,10 +23,10 @@ module.exports = function(app) {
       app.views.findTrips.locateNearbyTrips();
     },
 
-    tripDetails: function(tripId) {
-      //console.log('router tripDetails');
+    tripDetails: function(compositeTripId) {
+      console.log('router tripDetails');
       this.changePage('#trip_details');
-      app.views.tripDetails.getTripStops();
+      app.views.tripDetails.getTripStops(compositeTripId);
     },
 
     feedback: function() {

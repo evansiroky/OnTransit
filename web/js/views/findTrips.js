@@ -2,7 +2,8 @@ var $ = require('jquery'),
   _ = require('underscore'),
   Backbone = require('Backbone'),
   moment = require('moment'),
-  Mustache = require('Mustache');
+  Mustache = require('Mustache'),
+  util = require('../util.js');
 
 var tripListItemTemplate = $('#tripListItemTemplate').html();
 Mustache.parse(tripListItemTemplate);
@@ -25,35 +26,13 @@ module.exports = function(app) {
       $('#find_trips_locate_button').hide();
       $('#find_trip_list').empty();
 
-      // get user location
-      if ("geolocation" in navigator) {
-        // console.log('geolocation is available');
-        navigator.geolocation.getCurrentPosition(_.bind(this.geolocationSuccess, this),
-          _.bind(this.geolocationError, this),
-          {
-            enableHighAccuracy: true,
-            timeout: 20000,
-            maximumAge: 60000
-          }
-        );
-      } else {
-        //console.log('geolocation IS NOT available');
-        this.popupError('Your web browser does not allow geolocation.  Please use a browser with this feature.');
-      }
+      // get position
+      util.getLocation(_.bind(this.geolocationSuccess, this), _.bind(this.geolocationError, this));
 
-      // load nearby trips
     },
 
     geolocationError: function(err) {
-      switch (err.code) {
-        case 1:
-          this.popupError('This feature requires your location.  Unable to proceed.');
-          break;
-        case 2:
-        case 3:
-          this.popupError('Error getting your location.  Try again later.');
-          break;
-      }
+      this.popupError(err);
     },
 
     geolocationSuccess: function(position) {
@@ -92,7 +71,7 @@ module.exports = function(app) {
 
     popupError: function(msg) {
       $('#find_trips_error_message').html(msg);
-      $("#find_trips_browser_problem").popup("open");
+      $("#find_trips_problem").popup("open");
 
       $('#find_trips_progress').html(msg);
       $('#find_trips_locate_button').show();
