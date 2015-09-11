@@ -1,13 +1,45 @@
-var $ = require('jquery');
+var $ = require('jquery'),
+  analytics = require('ga-browser')(),
+  config = require('./config.js');
+
 $.mobile = require('jquery-mobile');
 
-$(document).on('pageinit', function() {
-  $('#jq-version').html($().jquery);
+var app = {},
+  firstLoad = true;
+
+// make a global func for xss callback
+window.initGMaps = function() {
+  app.geocoder = new google.maps.Geocoder();
+}
+
+$(function() {
+
+  // init google maps for geocoding
+  if(!config.geocoderApiKey) {
+    $.getScript('https://maps.googleapis.com/maps/api/js?sensor=false&callback=initGMaps');
+  } else {
+    $.getScript('https://maps.googleapis.com/maps/api/js?key=' + config.geocoderApiKey + '&callback=initGMaps');
+  }  
+
 });
 
-//custom button click handler to demonstrate working $.mobile function
-$(document).on('click', 'button', function() {
-  var link = $(this).attr("data-foo");
-  console.log('running $.mobile.changePage("'+link+'")');
-  $.mobile.changePage(link);
+$(document).on("pageinit", function () {
+
+  if(firstLoad) {
+    $.mobile.ajaxEnabled = false;
+    $.mobile.linkBindingEnabled = false;
+    $.mobile.hashListeningEnabled = false;
+    $.mobile.pushStateEnabled = false;
+    //$.mobile.autoInitializePage = false;
+
+    require('./views')(app);
+    require('./models')(app);
+    require('./router.js')(app);
+
+    // create GA tracking
+    analytics('create', config.gaTrackingId, 'auto'); 
+
+    firstLoad = false;
+  }
+
 });

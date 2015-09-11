@@ -8,12 +8,8 @@ var moment = require('moment-timezone'),
 var validateTripStopsJSON = validator({
   type: 'object',
   properties: {
-    trip_id: {
-      type: 'string'
-    },
-    trip_date: {
-      type: 'string',
-      format: 'date'
+    accuracy: {
+      type: 'number'
     },
     lat: {
       type: 'number',
@@ -28,9 +24,16 @@ var validateTripStopsJSON = validator({
       exclusiveMinimum: true,
       maximum: 180,
       exclusiveMaximum: true
+    },
+    trip_id: {
+      type: 'string'
+    },
+    trip_start_datetime: {
+      type: 'string',
+      format: 'date-time'
     }
   },
-  required: ['trip_id', 'trip_date', 'lat', 'lon']
+  required: ['accuracy', 'lat', 'lon', 'trip_id', 'trip_start_datetime']
 }, {
   verbose: true
 });
@@ -107,11 +110,11 @@ var calculateTripDelay = function(req, res, db) {
         // calculate current seconds after midnight
         var userLineFraction = trip.shape_gi.dataValues.line_fraction,
           tripTz = stopTimes[0].trip.route.agency.agency_timezone,
-          tripDate = moment.tz(req.query.trip_date, tripTz),
+          tripStartDateTime = moment.tz(req.query.trip_start_datetime, tripTz),
           now = moment().tz(tripTz),
           nowSeconds = now.hours() * 3600 + now.minutes() * 60 + now.seconds();
 
-        if(now.diff(tripDate, 'days') > 0) {
+        if(now.diff(tripStartDateTime, 'days') > 0) {
           nowSeconds += 86400;
         }
 

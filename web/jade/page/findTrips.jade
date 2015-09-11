@@ -1,0 +1,28 @@
+#find_trips(data-role='page')
+  div(data-role='header')
+    a.ui-btn-icon-left(data-icon='bars', href='#find_trips_left_nav_panel') Menu
+    h1 Find Trips
+
+  div#find_trips_left_nav_panel.left_nav_panel(data-role='panel')
+    include ../widget/leftPanel.jade
+
+  .ui-content(data-role='main')
+    p#find_trips_progress Finding trips...
+    button#find_trips_locate_button.ui-btn.ui-icon-location.ui-btn-icon-left Locate Nearby Trips
+    .page_wide_header
+      h2 Nearby Trips
+    ul#find_trip_list(data-role='listview')
+
+  #find_trips_problem(data-role='popup' data-dismissable='false')
+    .ui-content
+      p#find_trips_error_message
+      a.ui-btn.ui-corner-all.ui-shadow.ui-btn-inline(data-rel='back') OK
+
+  #find_trips_confirm_onboard(data-role='popup' data-dismissable='false')
+    .ui-content
+      p.confirm_main_point Are you on this transit vehicle?  
+      p.confirm_tldr By clicking yes, you are agreeing to use your device's location to calculate how early or late this vehicle is.  Other people will then be able to know how early or late this transit trip is.
+      a#find_trips_yes_on_vehicle_button.ui-btn.ui-corner-all.ui-shadow.ui-btn-inline Yes
+      a#find_trips_not_on_vehicle_button.ui-btn.ui-corner-all.ui-shadow.ui-btn-inline No
+
+    

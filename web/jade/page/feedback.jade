@@ -1,0 +1,12 @@
+#feedback(data-role='page')
+  div(data-role='header')
+    a.ui-btn-icon-left(data-icon='bars', href='#feedback_left_nav_panel') Menu
+    h1 Feedback
+
+  div#feedback_left_nav_panel.left_nav_panel(data-role="panel")
+    include ../widget/leftPanel.jade
+  
+  div(data-role="main" class="ui-content")
+    p What kind of feedback do you have?
+    button#feedback_agency_button.ui-btn.ui-icon-bus.ui-btn-icon-left Transit Service Feedback
+    button#feedback_app_button.ui-btn.ui-icon-screen.ui-btn-icon-left App Feedback

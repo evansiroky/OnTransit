@@ -1,0 +1,13 @@
+#home(data-role='page')
+  div(data-role='header')
+    a.ui-btn-icon-left(data-icon='bars', href='#home_left_nav_panel') Menu
+    h1 OnTransit
+
+  div#home_left_nav_panel.left_nav_panel(data-role="panel")
+    include ../widget/leftPanel.jade
+  
+  div(data-role="main" class="ui-content")
+    h2#home_title Welcome to OnTransit
+    p This is a demo app for finding the delay of a transit trip based on your position.
+    p Click the button below to find transit trips near you.
+    button#home_find_trips_button.ui-btn.ui-icon-location.ui-btn-icon-left Find Nearby Trips

@@ -4,10 +4,17 @@ var fs = require('fs'),
   app = express();
 
 // check if this file was invoked direct through command line or required as an export
-var invocation = (require.main === module) ? 'direct' : 'required';
+var invocation = (require.main === module) ? 'direct' : 'required',
+  backboneRoutes = ['/', '/findTrips', '/tripDetails', '/tripDetails/:id', '/feedback'];
 
 var main = function(config, callback) {
-  app.use('/', express.static('../web/dist'));
+  
+  var staticFiles = express.static('../web/dist');
+  
+  for (var i = 0; i < backboneRoutes.length; i++) {
+    app.use(backboneRoutes[i], staticFiles);
+  };
+  
   app.use(queryType.middleware())
 
   require('./routes')(app, config);
