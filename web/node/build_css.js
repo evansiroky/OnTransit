@@ -23,6 +23,10 @@ fs.readdirSync('./dist').forEach(function(file) {
 concat(files, dest, opCallback('files concatenated'));
 
 fs.copy('node_modules/jquery-mobile/dist/images', 
-		'dist/images', 
-		opCallback('jqm images moved'));
+    'dist/images', 
+    opCallback('jqm images moved'));
+
+fs.copy('assets', 
+    'dist/assets', 
+    opCallback('assets moved'));
 

@@ -1,4 +1,5 @@
-var Backbone = require('Backbone');
+var Backbone = require('Backbone'),
+  util = require('../util.js');
 
 module.exports = function(app) {
   
@@ -11,11 +12,16 @@ module.exports = function(app) {
     },
 
     agencyFeedback: function() {
-
+      util.sendAgencyFeedback(app,
+        'Feedback View', 
+        'Send Agency Feedback', 
+        'Feedback View: Send Agency Feedback Button');
     },
 
     appFeedback: function() {
-
+      util.sendAppFeedback('Feedback View', 
+        'Send App Feedback', 
+        'Feedback View: Send App Feedback Button');
     },
 
     initialize: function() {

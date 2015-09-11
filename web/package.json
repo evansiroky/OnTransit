@@ -14,6 +14,7 @@
     "browserify-shim": "^3.8.8",
     "concat": "^1.0.0",
     "fs-extra": "^0.18.4",
+    "ga-browser": "^1.0.0",
     "jade": "^1.10.0",
     "jquery": "^2.1.4",
     "jquery-mobile": "^1.4.1",
@@ -41,9 +42,10 @@
     "build:html-dev": "jade jade/index.jade -P -o dist",
     "build": "npm run build:js && npm run build:html && npm run build:css",
     "build-dev": "npm run build:js && npm run build:html-dev && npm run build:css",
-    "build-dev:watch": "parallelshell \"npm run watch:js\" \"npm run watch:css\" \"npm run watch:html\"",
+    "build-dev:watch": "parallelshell \"npm run watch:js\" \"npm run watch:css\" \"npm run watch:assets\" \"npm run watch:html\"",
     "watch:js": "watch \"npm run build:js-dev\" js",
     "watch:css": "watch \"npm run build:css-dev\" styles",
+    "watch:assets": "watch \"npm run build:css-dev\" assets",
     "watch:html": "watch \"npm run build:html-dev\" jade"
   },
   "browser": {

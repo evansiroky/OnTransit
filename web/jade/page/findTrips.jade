@@ -8,14 +8,15 @@
 
   .ui-content(data-role='main')
     p#find_trips_progress Finding trips...
-    button#find_trips_locate_button.ui-btn Locate Nearby Trips
+    button#find_trips_locate_button.ui-btn.ui-icon-location.ui-btn-icon-left Locate Nearby Trips
     .page_wide_header
       h2 Nearby Trips
     ul#find_trip_list(data-role='listview')
 
   #find_trips_problem(data-role='popup' data-dismissable='false')
-    p#find_trips_error_message
-    a.ui-btn.ui-corner-all.ui-shadow.ui-btn-inline(data-rel='back') OK
+    .ui-content
+      p#find_trips_error_message
+      a.ui-btn.ui-corner-all.ui-shadow.ui-btn-inline(data-rel='back') OK
 
   #find_trips_confirm_onboard(data-role='popup' data-dismissable='false')
     .ui-content

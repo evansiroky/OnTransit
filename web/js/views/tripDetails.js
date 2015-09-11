@@ -3,6 +3,7 @@ var $ = require('jquery'),
   Backbone = require('Backbone'),
   moment = require('moment'),
   Mustache = require('Mustache'),
+  config = require('../config.js'),
   util = require('../util.js');
 
 var tripStopListItemTemplate = $('#tripStopListItemTemplate').html();
@@ -128,10 +129,22 @@ module.exports = function(app) {
     },
 
     sendAgencyFeedback: function() {
+      var mailToOptions = {};
+      mailToOptions['Trip ID'] = this.tripId;
+      mailToOptions['Trip Start DateTime'] = moment.tz(this.tripStartDatetime,
+        config.agencyTZ).format('LLLL');
+      util.sendAgencyFeedback(app,
+        'Trip Details View', 
+        'Send Agency Feedback', 
+        'Trip Details View: Send Agency Feedback Button', 
+        mailToOptions
+      );
     },
 
     sendAppFeedback: function() {
-
+      util.sendAppFeedback('Trip Details View', 
+        'Send App Feedback', 
+        'Trip Details View: Send App Feedback Button');
     },
 
     sendFeedback: function() {
