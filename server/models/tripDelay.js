@@ -8,6 +8,7 @@ module.exports = function(sequelize, DataTypes) {
         key: "trip_id"
       }
     },
+    block_id: DataTypes.STRING(255),
     seconds_of_delay: DataTypes.INTEGER
   }, {
     freezeTableName: true,

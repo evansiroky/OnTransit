@@ -86,8 +86,7 @@ module.exports = function(dbconfig, loaderCallback) {
             where: {
               service_id: validService.service_id
             },
-            include: [db.stop_time,
-              {
+            include: [{
                 model: db.route,
                 include: [db.agency]
               }
@@ -96,22 +95,39 @@ module.exports = function(dbconfig, loaderCallback) {
             if(trips.length > 0) {
               var tripAttrs = Object.keys(db.trip.attributes),
                 tripDate = validService.date.format('YYYY-MM-DD');
+
               console.log('adding trips for service_id `' + validService.service_id + '` on ' + tripDate);
+              
               delete tripAttrs.createdAt;
               delete tripAttrs.updatedAt;
-              for (var k = 0; k < trips.length; k++) {
-                var curTrip = trips[k],
-                  copyTrip = {},
+
+              async.each(trips, function(curTrip, itemCallback) {
+                var copyTrip = {},
                   curTripDate = moment.tz(tripDate, curTrip.route.agency.agency_timezone);
+
                 for (var i = 0; i < tripAttrs.length; i++) {
                   copyTrip[tripAttrs[i]] = curTrip[tripAttrs[i]];
                 };
-                copyTrip.start_datetime = moment(curTripDate).add(curTrip.stop_times[0].departure_time, 'seconds').toDate();
-                copyTrip.end_datetime = moment(curTripDate).add(curTrip.stop_times[curTrip.stop_times.length - 1].arrival_time, 'seconds').toDate();
-                tripInserter.push(copyTrip);
-              };
+
+                // find first and last stop times
+                db.stop_time.findAll({
+                  where: {
+                    trip_id: curTrip.trip_id
+                  },
+                  order: [
+                    ['stop_sequence', 'ASC']
+                  ]
+                }).then(function(stop_times) {
+                  copyTrip.start_datetime = moment(curTripDate).add(stop_times[0].departure_time, 'seconds').toDate();
+                  copyTrip.end_datetime = moment(curTripDate).add(stop_times[stop_times.length - 1].arrival_time, 'seconds').toDate();
+                  tripInserter.push(copyTrip);
+                  itemCallback();
+                });
+              },
+              serviceCallback);
+            } else {
+              serviceCallback();
             }
-            serviceCallback();
           });
         },
         serviceDefCallback
@@ -197,12 +213,12 @@ module.exports = function(dbconfig, loaderCallback) {
   }
 
   async.series([
-      function(cb) {
+      /*function(cb) {
         gtfsWorker.downloadGtfs(cb)
       },
       function(cb) {
         gtfsWorker.loadGtfs(cb);
-      },
+      },*/
       createAppModels,
       calculateDailyTrips,
       grantWebUserPermissions

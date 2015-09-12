@@ -15,27 +15,13 @@ module.exports = function(app) {
     el: '#trip_details',
 
     events: {
-      'click #trip_details_footer_refresh': 'refreshData',
+      'click #trip_details_footer_refresh': 'getTripStops',
       'click #trip_details_footer_feedback': 'sendFeedback',
       'click #trip_details_feedback_agency_button': 'sendAgencyFeedback',
       'click #trip_details_feedback_app_button': 'sendAppFeedback'
     },
 
-    getTripStops: function(compositeTripId) {
-      var tripStartDatetime = compositeTripId.split('_')[0],
-        tripId = compositeTripId.split('_')[1];
-
-      if(tripStartDatetime && tripId) {
-        this.tripStartDatetime = tripStartDatetime;
-        this.tripId = tripId;
-      }
-
-      // get position
-      util.getLocation(_.bind(this.geolocationSuccess, this), _.bind(this.geolocationError, this));
-
-    },
-
-    refreshData: function() {
+    getTripStops: function() {
       util.getLocation(_.bind(this.geolocationSuccess, this), _.bind(this.geolocationError, this));
     },
 
@@ -51,8 +37,9 @@ module.exports = function(app) {
           accuracy: position.coords.accuracy,
           lat: position.coords.latitude,
           lon: position.coords.longitude,
-          trip_id: this.tripId,
-          trip_start_datetime: this.tripStartDatetime
+          trip_id: app.curTrip.get('trip_id'),
+          block_id: app.curTrip.get('block_id'),
+          trip_start_datetime: app.curTrip.get('start_datetime')
         }
       });
     },
@@ -77,10 +64,8 @@ module.exports = function(app) {
 
     renderTripStops: function(collection, response, options) {
 
-      console.log(collection, response, options);
+      //console.log(collection, response, options);
       
-      // $('#find_trips_locate_button').show();
-
       var tripStopListHTML = '',
         pastUser = false,
         timeFmt = 'h:mma',

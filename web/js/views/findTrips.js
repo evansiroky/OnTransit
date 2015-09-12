@@ -21,6 +21,7 @@ module.exports = function(app) {
     },
 
     locateNearbyTrips: function() {
+      
       // change ui state
       $('#find_trips_progress').html('Locating trips...');
       $('#find_trips_locate_button').hide();
@@ -64,9 +65,9 @@ module.exports = function(app) {
 
     onTransit: function() {
       $("#find_trips_confirm_onboard").popup('close');
-      app.router.navigate('tripDetails/' + 
-        this.curTripTarget.attr('id').replace('trip_list_item_', ''), 
-        { trigger: true });
+      var curTripIdx = parseInt(this.curTripTarget.attr('id').replace('trip_list_item_', ''), 10);
+      app.curTrip = app.collections.trips.at(curTripIdx);
+      app.router.navigate('tripDetails/', { trigger: true });
     },
 
     popupError: function(msg) {
@@ -79,27 +80,31 @@ module.exports = function(app) {
     },
 
     renderTrips: function(collection, response, options) {
+      
+      $('#find_trips_locate_button').show();
+
       if(collection.length == 0) {
         $('#find_trips_progress').html('No trips found.  ' +
           'There may not be any trips nearby, or there may not be any active trips.  ' +
-          'Please try again.');
+          'Please try again later.');
+        return;
       }
 
-      $('#find_trips_progress').html('');
-      $('#find_trips_locate_button').show();
+      $('#find_trips_progress').html(collection.length + ' trips found.');
 
       var tripList = [];
 
-      collection.each(function(trip) {
+      collection.each(function(trip, idx) {
         var timeFmt = 'h:mma',
           tripStart = moment(trip.get('start_datetime')).format(timeFmt),
           tripEnd = moment(trip.get('end_datetime')).format(timeFmt),
           route = trip.get('route');
         tripList.push({
           distance: Math.round(trip.get('shape_gi').distance * 3.28084),
-          id: trip.get('trip_composite_id'),
+          id: idx,
           timing: 'Start: ' + tripStart + '  End: ' + tripEnd,
-          title: route.route_short_name + ' - ' + route.route_long_name + ' - ' + trip.get('trip_headsign')
+          route_name: route.route_short_name + ' - ' + route.route_long_name,
+          trip_headsign: trip.get('trip_headsign')
         })
       }, this);
 

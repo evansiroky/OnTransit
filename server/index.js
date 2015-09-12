@@ -31,10 +31,6 @@ var main = function(config, callback) {
 
   });
 
-  app.listen(4321, function() {
-    app.close();
-  });
-
 }
 
 // Allow script to be called directly from commandline or required (for testable code)

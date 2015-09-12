@@ -1,4 +1,4 @@
-var fs = require('js');
+var fs = require('fs');
 
 try {
   fs.mkdirSync('dist');

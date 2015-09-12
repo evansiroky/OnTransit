@@ -23,9 +23,15 @@ $(function() {
 
 });
 
-$(document).on("pageinit", function () {
+$(window).on("popstate", function(e) {
+  // prevent jQuery mobile from hijacking back event?
+  e.preventDefault();
+});
+
+$(document).on("pageinit", function (event, ui) {
 
   if(firstLoad) {
+
     $.mobile.ajaxEnabled = false;
     $.mobile.linkBindingEnabled = false;
     $.mobile.hashListeningEnabled = false;
