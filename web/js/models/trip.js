@@ -1,4 +1,4 @@
-var Backbone = require('Backbone');
+var Backbone = require('backbone');
 
 var Trip = Backbone.Model.extend({
   idAttribute: 'trip_composite_id',

@@ -27,7 +27,7 @@
   },
   "scripts": {
     "clean": "rimraf dist/*",
-    "prebuild": "npm run clean -s",
+    "prebuild": "npm run clean -s && node node/prepareDist.js",
     "prebuild-dev": "npm run prebuild",
     "prebuild:css-dev": "stylus styles/ -o dist/",
     "prebuild:css": "stylus styles/ -c -o dist/",

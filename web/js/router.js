@@ -1,5 +1,5 @@
 var $ = require('jquery'),
-  Backbone = require('Backbone');
+  Backbone = require('backbone');
 
 module.exports = function(app) {
 

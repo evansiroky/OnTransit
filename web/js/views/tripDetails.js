@@ -1,8 +1,8 @@
 var $ = require('jquery'),
   _ = require('underscore'),
-  Backbone = require('Backbone'),
+  Backbone = require('backbone'),
   moment = require('moment'),
-  Mustache = require('Mustache'),
+  Mustache = require('mustache'),
   config = require('../config.js'),
   util = require('../util.js');
 

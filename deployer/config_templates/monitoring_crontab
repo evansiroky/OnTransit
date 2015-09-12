@@ -1,0 +1,2 @@
+MAILTO={cron_email}
+*/5 * * * * /usr/local/aws-scripts-mon/mon-put-instance-data.pl --mem-util --disk-space-util --disk-path=/ --from-cron --aws-access-key-id={aws_access_key_id} --aws-secret-key={aws_secret_key}
