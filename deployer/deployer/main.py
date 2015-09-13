@@ -38,7 +38,7 @@ class Fab:
     ontransit_server_folder = unix_path_join(ontransit_base_folder, 'server')
     ontransit_web_folder = unix_path_join(ontransit_base_folder, 'web')
     user = aws_conf.get('user')
-    user_home = unix_path_join('/root')
+    user_home = unix_path_join(aws_conf.get('user_home'))
     server_config_dir = unix_path_join(user_home, 'conf')
     server_script_dir = unix_path_join(user_home, 'scripts')
     
@@ -131,8 +131,8 @@ class Fab:
         '''Overwrites pg_hba.conf with specified local method.
         '''
         
-        remote_data_folder = '/var/lib/pgsql/9.3/data/'
-        remote_pg_hba_conf = '/var/lib/pgsql/9.3/data/pg_hba.conf'
+        remote_data_folder = '/var/lib/pgsql9/data'
+        remote_pg_hba_conf = '/var/lib/pgsql9/data/pg_hba.conf'
         
         sudo('rm -rf {0}'.format(remote_pg_hba_conf))
         
@@ -149,20 +149,67 @@ class Fab:
         '''Downloads and configures PostgreSQL.
         '''
         
-        # get yum squared away
-        sudo('rpm -ivh http://yum.postgresql.org/9.3/redhat/rhel-6-x86_64/pgdg-centos93-9.3-1.noarch.rpm')
+        # enable 9.3 repo
+        sudo('rpm -ivh http://yum.postgresql.org/9.3/redhat/rhel-6-x86_64/pgdg-ami201503-93-9.3-1.noarch.rpm')
         
+        # install rpms that people just forgot about
+        run('mkdir postgis')
+        
+        with cd('postgis'):
+            run('wget ftp://rpmfind.net/linux/mageia/distrib/1/x86_64/media/core/updates/lib64jpeg8-8b-5.1.mga1.x86_64.rpm')
+            sudo('yum -y install lib64jpeg8-8b-5.1.mga1.x86_64.rpm')
+            run('wget ftp://rpmfind.net/linux/Mandriva/official/2010.1/x86_64/media/main/updates/lib64poppler5-0.12.4-2.1mdv2010.1.x86_64.rpm')
+            sudo('yum -y install lib64poppler5-0.12.4-2.1mdv2010.1.x86_64.rpm')
+            run('wget http://mirror.centos.org/centos/6/os/x86_64/Packages/qt-4.6.2-28.el6_5.x86_64.rpm')
+            sudo('yum -y install qt-4.6.2-28.el6_5.x86_64.rpm')
+            
         # install postgresql
-        sudo('yum -y install postgresql93 postgresql93-server postgresql93-libs postgresql93-contrib postgresql93-devel')
+        sudo('yum -y install postgresql93 postgresql93-server postgresql93-contrib')
+        sudo('yum -y install postgis2_93 postgis2_93-devel postgis2_93-utils --enablerepo=epel')
         
-        # make sure yum knows about postgis dependencies
-        sudo('rpm -ivh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm')
+        ''''# install gcc and friends
+        sudo('yum -y install gcc make gcc-c++ libtool libxml2-devel')
         
-        # install postgis
-        sudo('yum -y install postgis2_93')
+        run('mkdir postgis')
+        
+        with cd('postgis'):
+            
+            # download, configure, make, install geos (GEOS 3.3.2+ is recommended.)
+            run('wget http://download.osgeo.org/geos/geos-3.5.0.tar.bz2')
+            run('tar xjf geos-3.5.0.tar.bz2')
+            
+            with cd('geos-3.5.0'):
+                run('./configure')
+                run('make')
+                sudo('make install')
+                
+            # download, configure, make, install proj (version 4.6.0 or greater)
+            run('wget http://download.osgeo.org/proj/proj-4.9.1.tar.gz')
+            run('wget http://download.osgeo.org/proj/proj-datumgrid-1.5.zip')
+            run('tar xzf proj-4.9.1.tar.gz')
+            
+            with cd('proj-4.9.1/nad'):
+                run('unzip ../../proj-datumgrid-1.5.zip')
+            
+            with cd('proj-4.9.1'):
+                run('./configure')
+                run('make')
+                sudo('make install')
+                
+            # download, configure, make, install postgis 2.x
+            run('wget http://download.osgeo.org/postgis/source/postgis-2.1.8.tar.gz')
+            run('tar xzf postgis-2.1.8.tar.gz')
+            
+            with cd('postgis-2.1.8'):
+                run('./configure --with-geosconfig=/usr/local/bin/geos-config --without-raster')
+                run('make')
+                sudo('make install')
+                
+        print('Please ssh as root onto the machine and follow the instructions in the section "EC2 PostgreSQL Setup".')
+        input('Press enter to continue...')    '''        
         
         # initialize db
-        sudo('service postgresql-9.3 initdb')
+        sudo('service postgresql-9.4 initdb')
         
         # upload insecure pg_hba.conf
         self.upload_pg_hba_conf('trust')
@@ -181,10 +228,11 @@ class Fab:
             self.server_config_dir)
         
         # start postgres
-        sudo('service postgresql-9.3 start')
+        sudo('service postgresql-9.4 start')
         
         # execute db setup sql
-        sudo('psql -U postgres -f {0}'.format(unix_path_join(self.server_config_dir, 'db_setup.sql')))
+        sudo('psql -U postgres -f {0}'.
+             format(unix_path_join(self.server_config_dir, 'db_setup.sql')))
         sudo('psql -U postgres -d {0} -c "CREATE EXTENSION postgis;"'.
              format(self.ontransit_conf.get('database_name')))
         
@@ -192,10 +240,10 @@ class Fab:
         self.upload_pg_hba_conf('md5')
         
         # restart postgres
-        sudo('service postgresql-9.3 restart')
+        sudo('service postgresql-9.4 restart')
         
         # start postgresql on boot
-        sudo('chkconfig postgresql-9.3 on')
+        sudo('chkconfig postgresql-9.4 on')
         
     def install_node(self):
         '''Installs node and npm.
@@ -203,6 +251,9 @@ class Fab:
         
         run('yum -y install nodejs')
         run('yum -y install npm')
+        
+        # install forever for running node scripts forever
+        run('npm install forever -g')
         
         '''Alternative download and install
         run('wget https://nodejs.org/dist/latest/node-v4.0.0-linux-x64.tar.gz')
@@ -266,14 +317,7 @@ class Fab:
         '''
         
         with cd(self.ontransit_server_folder):
-            run('node index.js')
-            
-    def stop_server(self):
-        '''Stops the OnTransit server.
-        '''
-        
-        # call to stop listener port
-        run('wget http://localhost:4321 > /dev/null')    
+            run('set -m; nohup node index.js')   
         
 
 def get_aws_connection():
@@ -322,7 +366,7 @@ def launch_new():
     block_device.size = aws_conf.get('volume_size')
     block_device.delete_on_termination = True
     block_device_map = boto.ec2.blockdevicemapping.BlockDeviceMapping()
-    block_device_map['/dev/sda1'] = block_device 
+    block_device_map[aws_conf.get('block_device_map')] = block_device 
     
     print('Launching new instance')
     reservation = conn.run_instances(aws_conf.get('ami_id'),
@@ -368,11 +412,12 @@ def install_dependencies(instance_dns_name=None):
     
     # If we've reached this point, the instance is up and running.
     print('SSH working')
-    fab.update_system()
-    fab.install_helpers()
+    #fab.update_system()
+    #fab.install_helpers()
     fab.install_custom_monitoring()
     fab.set_timezone()
     fab.install_pg()
+    return
     fab.install_git()
     fab.install_node()
 
@@ -541,7 +586,7 @@ def master():
     install_ontransit(public_dns_name)
     
     # update GTFS, make new bundle
-    update(public_dns_name, False)
+    update_gtfs(public_dns_name, False)
     
     # start server
     start_server(public_dns_name)

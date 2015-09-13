@@ -24,7 +24,7 @@ setup(
             # oba/gtfs activation
             'validate_gtfs=deployer.main:validate_gtfs',
             'update_gtfs=deployer.main:update_gtfs',
-            'start_ontransit=deployer.main:start',
+            'start_ontransit=deployer.main:start_server',
             
             # one command new deployment
             'deploy_master=deployer.main:master'
