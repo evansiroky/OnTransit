@@ -213,12 +213,12 @@ module.exports = function(dbconfig, loaderCallback) {
   }
 
   async.series([
-      /*function(cb) {
+      function(cb) {
         gtfsWorker.downloadGtfs(cb)
       },
       function(cb) {
         gtfsWorker.loadGtfs(cb);
-      },*/
+      },
       createAppModels,
       calculateDailyTrips,
       grantWebUserPermissions

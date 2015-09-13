@@ -216,6 +216,9 @@ class Fab:
         
         run('git clone {0}'.format(self.ontransit_conf.get('ontransit_git_repo')))
         
+        with cd(self.ontransit_base_folder):
+            run('git checkout {0}'.format(self.ontransit_conf.get('ontransit_git_branch')))
+        
         # upload server config
         server_data = dict(gtfs_static_url=self.gtfs_conf.get('gtfs_static_url'),
                            database_name=self.ontransit_conf.get('database_name'),
@@ -496,19 +499,20 @@ def validate_gtfs():
     return gtfs_validated
 
 
-def update(instance_dns_name=None):
+def update_gtfs(instance_dns_name=None, validate=False):
     '''Update the gtfs file on the EC2 instance and tell OnTransit to load the latest gtfs.
     
     This assumes that OnTransit has been installed on the server.
     
     Args:
         instance_dns_name (string, default=None): The EC2 instance to update the gtfs on.
+        validate (boolean, default=True): Whether or not to require a passing validation the GTFS.
     '''
     
-    if not validate_gtfs():
+    if validate and not validate_gtfs():
         raise Exception('GTFS static file validation Failed.')
         
-    fab = Fab(get_fab(instance_dns_name))
+    fab = get_fab(instance_dns_name)
     fab.update_gtfs()
     
     
@@ -516,16 +520,8 @@ def start_server(instance_dns_name=None):
     '''Starts the OnTransit server.
     '''
     
-    fab = Fab(get_fab(instance_dns_name))
+    fab = get_fab(instance_dns_name)
     fab.start_server()
-    
-
-def stop_server(instance_dns_name=None):
-    '''Stops the OnTransit server.
-    '''
-    
-    fab = Fab(get_fab(instance_dns_name))
-    fab.stop_server()
     
     
 def master():
@@ -545,7 +541,7 @@ def master():
     install_ontransit(public_dns_name)
     
     # update GTFS, make new bundle
-    update(public_dns_name)
+    update(public_dns_name, False)
     
     # start server
     start_server(public_dns_name)

@@ -25,7 +25,6 @@ setup(
             'validate_gtfs=deployer.main:validate_gtfs',
             'update_gtfs=deployer.main:update_gtfs',
             'start_ontransit=deployer.main:start',
-            'stop_ontransit=deployer.main:stop',
             
             # one command new deployment
             'deploy_master=deployer.main:master'
