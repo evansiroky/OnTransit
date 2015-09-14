@@ -37,17 +37,28 @@ class Fab:
     ontransit_base_folder = ontransit_conf.get('ontransit_base_folder')
     ontransit_server_folder = unix_path_join(ontransit_base_folder, 'server')
     ontransit_web_folder = unix_path_join(ontransit_base_folder, 'web')
-    user = aws_conf.get('user')
-    user_home = unix_path_join('/root')
-    server_config_dir = unix_path_join(user_home, 'conf')
-    server_script_dir = unix_path_join(user_home, 'scripts')
     
-    def __init__(self, host_name):
+    def __init__(self, user_type, host_name):
         '''Constructor for Class.  Sets up fabric environment.
         
         Args:
+            user_type (string): the linux user type
             host_name (string): ec2 public dns name
         '''
+        
+        if user_type == 'root':
+            self.user = self.aws_conf.get('root_user')
+            self.user_home = unix_path_join('/root')
+            self.server_config_dir = unix_path_join(self.user_home, 'conf')
+            self.script_dir = unix_path_join(self.user_home, 'scripts')
+            self.data_dir = unix_path_join(self.user_home, 'data')
+        else:
+            env.password = self.aws_conf.get('regular_user_password')
+            self.user = self.aws_conf.get('regular_user_name')
+            self.user_home = unix_path_join('/home', self.user)
+            self.server_config_dir = unix_path_join(self.user_home, 'conf')
+            self.script_dir = unix_path_join(self.user_home, 'scripts')
+            self.data_dir = unix_path_join(self.user_home, 'data')
         
         env.host_string = '{0}@{1}'.format(self.user, host_name)
         env.key_filename = [self.aws_conf.get('key_filename')]
@@ -75,6 +86,23 @@ class Fab:
         '''
         
         run('uname')
+        
+    def new_user(self):
+        '''Setup a non-root user.
+        '''
+        
+        regular_user_name = self.aws_conf.get('regular_user_name')
+        
+        run('adduser {0}'.format(regular_user_name))
+        run('echo {0} | passwd {1} --stdin'.
+            format(self.aws_conf.get('regular_user_password'),
+                   regular_user_name))
+        
+        # grant sudo access to regular user
+        put(write_template(dict(regular_user_name=regular_user_name),
+                           'user-init'),
+            '/etc/sudoers.d',
+            True)
         
     def update_system(self):
         '''Updates the instance with the latest patches and upgrades.
@@ -131,7 +159,7 @@ class Fab:
         '''Overwrites pg_hba.conf with specified local method.
         '''
         
-        remote_data_folder = '/var/lib/pgsql/9.3/data/'
+        remote_data_folder = '/var/lib/pgsql/9.3/data'
         remote_pg_hba_conf = '/var/lib/pgsql/9.3/data/pg_hba.conf'
         
         sudo('rm -rf {0}'.format(remote_pg_hba_conf))
@@ -201,14 +229,28 @@ class Fab:
         '''Installs node and npm.
         '''
         
-        run('yum -y install nodejs')
-        run('yum -y install npm')
+        sudo('yum -y install nodejs')
+        sudo('yum -y install npm')
+        
+        # install forever to run server continuously
+        sudo('npm install forever -g')
         
         '''Alternative download and install
         run('wget https://nodejs.org/dist/latest/node-v4.0.0-linux-x64.tar.gz')
         run('tar xzf node-v4.0.0-linux-x64.tar.gz')
         run('rm -rf node-v4.0.0-linux-x64.tar.gz')
         run('mv node-v4.0.0-linux-x64 node')'''
+        
+    def setup_iptables(self):
+        '''Adds in iptables rules to forward 80 to 3000.
+        
+        Got help from: http://serverfault.com/questions/722270/configuring-centos-6-iptables-to-use-port-80-for-nodejs-app-running-on-port-3000/722282#722282
+        '''
+        
+        sudo('iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT')
+        sudo('iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j REDIRECT --to-port 3000')
+        sudo('iptables -I INPUT 1 -p tcp --dport 3000 -j ACCEPT')
+        sudo('sudo service iptables save')
         
     def install_ontransit(self):
         '''Clones and then installs OnTransit.
@@ -266,14 +308,42 @@ class Fab:
         '''
         
         with cd(self.ontransit_server_folder):
-            run('node index.js')
+            run('forever start --uid "ontransit" index.js')
             
+    def install_ontransit_cron_scripts(self):
+        '''Install cron scripts to make sure ontransit data is up-to-date.
+        '''
+        
+        # prepare update script
+        refresh_settings = dict(user=self.user,
+                                ontransit_base_folder=self.ontransit_base_folder)
+        
+        # check if script folder exists
+        if not exists(self.script_dir):
+            run('mkdir {0}'.format(self.script_dir))
+            
+        # check if data folder exists
+        if not exists(self.data):
+            run('mkdir {0}'.format(self.data))
+            
+        # prepare nightly update cron script
+        with open(os.path.join(CONFIG_TEMPLATE_DIR, 'gtfs_refresh_crontab')) as f:
+            refresh_cron_template = f.read()
+            
+        cron_settings = dict(cron_email=self.aws_conf.get('cron_email'),
+                             logfile=unix_path_join(self.data_dir, 'nightly_refresh.out'),
+                             user=self.user,
+                             ontransit_base_folder=self.ontransit_base_folder)
+        gtfs_refresh_cron = refresh_cron_template.format(**cron_settings)
+            
+        crontab_update(gtfs_refresh_cron, 'gtfs_refresh_cron')
+        
     def stop_server(self):
         '''Stops the OnTransit server.
         '''
         
         # call to stop listener port
-        run('wget http://localhost:4321 > /dev/null')    
+        run('forever stop ontransit')    
         
 
 def get_aws_connection():
@@ -290,10 +360,12 @@ def get_aws_connection():
                                       aws_secret_access_key=aws_conf.get('aws_secret_access_key'))
     
     
-def get_fab(instance_dns_name=None):
+def get_fab(user_type, instance_dns_name=None):
     '''Get a instance of fabric deployer.
     
     Args:
+        user_type (string): The user type to use when logging in.  
+            Typically "root" when first logging in and then whatever is defined in config. 
         instance_dns_name (string, default=None): The EC2 instance to deploy to.
         
     Returns:
@@ -303,7 +375,7 @@ def get_fab(instance_dns_name=None):
     if not instance_dns_name:
         instance_dns_name = input('Enter EC2 public dns name: ')
         
-    return Fab(instance_dns_name)
+    return Fab(user_type, instance_dns_name)
 
 
 def launch_new():
@@ -322,7 +394,7 @@ def launch_new():
     block_device.size = aws_conf.get('volume_size')
     block_device.delete_on_termination = True
     block_device_map = boto.ec2.blockdevicemapping.BlockDeviceMapping()
-    block_device_map['/dev/sda1'] = block_device 
+    block_device_map[aws_conf.get('block_device_map')] = block_device 
     
     print('Launching new instance')
     reservation = conn.run_instances(aws_conf.get('ami_id'),
@@ -355,6 +427,10 @@ def launch_new():
         print('Instance status: ' + status)
         return None
     
+    # setup regular user
+    fab = get_fab('root', instance.public_dns_name)
+    fab.new_user()
+    
     return instance.public_dns_name
     
     
@@ -362,20 +438,19 @@ def install_dependencies(instance_dns_name=None):
     '''Install a bunch of linux stuff and libraries essential to running OnTransit
     '''
     
-    # Now that the status is running, it's not yet launched. 
-    # The only way to tell if it's fully up is to try to SSH in.
-    fab = get_fab(instance_dns_name)
+    root_fab = get_fab('root', instance_dns_name)
     
     # If we've reached this point, the instance is up and running.
     print('SSH working')
-    fab.update_system()
-    fab.install_helpers()
-    fab.install_custom_monitoring()
-    fab.set_timezone()
-    fab.install_pg()
-    fab.install_git()
-    fab.install_node()
-
+    root_fab.update_system()
+    root_fab.install_helpers()
+    root_fab.install_custom_monitoring()
+    root_fab.set_timezone()
+    root_fab.install_pg()
+    root_fab.install_git()
+    root_fab.install_node()
+    root_fab.setup_iptables()
+    
 
 def tear_down(instance_id=None, conn=None):
     '''Terminates a EC2 instance and deletes all associated volumes.
@@ -423,7 +498,7 @@ def install_ontransit(instance_dns_name=None):
         instance_dns_name (string, default=None): The EC2 instance to deploy to.
     '''
     
-    fab = get_fab(instance_dns_name)
+    fab = get_fab('regular', instance_dns_name)
     fab.install_ontransit()
     
     
@@ -512,7 +587,7 @@ def update_gtfs(instance_dns_name=None, validate=False):
     if validate and not validate_gtfs():
         raise Exception('GTFS static file validation Failed.')
         
-    fab = get_fab(instance_dns_name)
+    fab = get_fab('regular', instance_dns_name)
     fab.update_gtfs()
     
     
@@ -520,8 +595,24 @@ def start_server(instance_dns_name=None):
     '''Starts the OnTransit server.
     '''
     
-    fab = get_fab(instance_dns_name)
+    fab = get_fab('regular', instance_dns_name)
     fab.start_server()
+    
+    
+def stop_server(instance_dns_name=None):
+    '''Starts the OnTransit server.
+    '''
+    
+    fab = get_fab('regular', instance_dns_name)
+    fab.stop_server()
+    
+    
+def install_cron_scripts(instance_dns_name=None):
+    '''Starts the OnTransit server.
+    '''
+    
+    fab = get_fab('regular', instance_dns_name)
+    fab.install_ontransit_cron_scripts()
     
     
 def master():
@@ -529,8 +620,8 @@ def master():
     '''
     
     # dl gtfs and validate it
-    if not validate_gtfs():
-        raise Exception('GTFS Validation Failed')
+    '''if not validate_gtfs():
+        raise Exception('GTFS Validation Failed')'''
     
     # setup new EC2 instance
     public_dns_name = launch_new()
@@ -541,7 +632,10 @@ def master():
     install_ontransit(public_dns_name)
     
     # update GTFS, make new bundle
-    update(public_dns_name, False)
+    update_gtfs(public_dns_name, False)
     
     # start server
     start_server(public_dns_name)
+    
+    # install crons
+    install_cron_scripts(public_dns_name)

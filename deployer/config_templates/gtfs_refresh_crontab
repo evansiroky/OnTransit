@@ -1,0 +1,2 @@
+MAILTO={cron_email}
+0 3 * * * (cd /home/{user}/{ontransit_base_folder}; npm run load-gtfs > {logfile}) 
