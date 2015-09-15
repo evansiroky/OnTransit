@@ -9,7 +9,7 @@ There are 3 main components to this project:
 2.  Server
  - An express.js server utilizing gtfs-sequelize for communicating with a PostGIS database.
 3.  Deployer
- - A bunch of python scripts to deploy the server to an EC2 instance.
+ - A bunch of python scripts to deploy the server to an EC2 instance (targeted OS: CentOS 6).
 
 ## Table of Contents
 
@@ -26,6 +26,8 @@ There are 3 main components to this project:
   * [EC2 Instance Notes](#ec2-instance-notes)
 
 ## Deployer
+
+The deployer part of the project consists of scripts to start a new CentOS 6 instance using Amazon Web Services and then install the OnTransit app.
 
 ### Installation
 
@@ -67,18 +69,23 @@ You'll need to create a bunch of config files before running the deployment scri
 
 | Setting Name | Description |
 | --- | --- |
-| ami_id | The base ami to start from.  Suggest value: `ami-81d092b1` (CentOS 6). |
+| ami_id | The base ami to start from.  Suggested value: `ami-81d092b1` (CentOS 6). |
 | aws_access_key_id | Access key for account. |
 | aws_secret_access_key | Secret access key for account. |
-| delete_volumes_on_tear_down | When tearing down instance, also delete volumes.  If using CentOS, you should set this to `true`. |
-| key_filename | The filename of your .pem file. |
+| block_device_map | The hard drive? to use when creating a volume.  Suggested value: `/dev/sda1`. |
+| cron_email | An email address to send cron output to. |
+| delete_volumes_on_tear_down | When tearing down instance, also delete volumes.  Volumes are set to auto-delete on instance termination, so you should set this to `false`. |
+| elasitc_ip | An elastic IP to use.  This isn't used yet in project. |
+| key_filename | The path of your .pem file. |
 | key_name | The name of the secret key for the EC2 instance to use. |
 | instance_name | The name to tag the instance with. |
 | instance_type | The EC2 instance type.  [(See instance types)](http://aws.amazon.com/ec2/pricing/). |
 | region | The AWS region to connect to. |
+| regular_user_name | Name of user that will get created on CentOS to run app. |
+| regular_user_password | Password of user. |
+| root_user | The name of the root user.  Suggested value: `root`. |
 | security_groups | Security groups to grant to the instance.  If more than one, seperate with commas. |
 | timezone | The linux timezone to set the machine to.  Use a path on the machine such as `/usr/share/zoneinfo/America/Los_Angeles`. |
-| user | The user to login as when connecting via ssh.  Suggested value: `root`. |
 | volume_size | Size of the AWS Volume for the new instance in GB.  | 
 
 #### gtfs.ini
@@ -110,11 +117,35 @@ If using linux, the executable files to run scripts will be in the `bin` folder 
 | --- | --- |
 | clean_config | Deletes the "config" folder. |
 | setup_config | Helper script to create configuration files for AWS, OnTransit and updating and validating GTFS. |
-| launch_new_ec2 | Launches a new Amazon EC2 instance and installs the essential software to run OnTransit. |
-| tear_down_ec2 | Terminates an Amazon EC2 instance. |
+| launch_new_ec2 | Launches a new Amazon EC2 instance and creates new regular use. |
+| install_dependencies | Installs the essential software to run OnTransit. |
 | install_ontransit | Installs OnTransit on server by cloning it and then installing with npm. |
 | validate_gtfs | Downloads and validates the static GTFS. |
 | update_gtfs | Loads new data into PostGIS db. Validate the GTFS before doing this. |
 | start_ontransit | Starts OnTransit Server. |
+| install_ontransit_crons | Installs various cron jobs to maintain data quality of OnTransit app. |
 | stop_ontransit | Stops OnTransit Server. |
-| deploy_master | Combines following scripts in order: launch_new_ec2, install_ontransit, update_gtfs, start_ontransit. |
+| tear_down_ec2 | Terminates an Amazon EC2 instance. |
+| deploy_master | Combines following scripts in order: launch_new_ec2, install_dependencies, install_ontransit, update_gtfs, start_ontransit, install_ontransit_crons. |
+
+### EC2 Instance Notes
+
+Here is a complete list of stuff that this script install/does on the instance:
+
+* Launches a new EC2 instance
+* Creates new user with sudo privileges
+* Updates system using `yum update`.
+* Installs wget, unzip
+* Installs [AWS Cloudwatch Monitoring Scripts](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/mon-scripts-perl.html). (starts via cron)
+* Changes the timezone of the machine.
+* Installs PostgreSQL
+* Installs PostGIS
+* Installs git
+* Installs node
+* Installs npm
+* Muks with iptables to forward port 80 traffic to port 3000.
+* Clones this repo.
+* Builds the web static files.
+* Loads in gtfs data.
+* Starts server
+* Installs a cron to refresh the data nightly
