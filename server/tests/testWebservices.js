@@ -31,7 +31,7 @@ describe('ontransit-server', function() {
 
     it('index.html', function() {
 
-      return rp('http://localhost:1234/').then(function(data) {
+      return rp('http://localhost:80/').then(function(data) {
         assert(data.indexOf('src="main.js"') > -1);
         assert(data.indexOf('href="main.css"') > -1);
       });
@@ -41,13 +41,14 @@ describe('ontransit-server', function() {
     it('trips', function() {
 
       return rp({
-        uri: 'http://localhost:1234/trips',
+        uri: 'http://localhost:80/trips',
         qs: {
           lat: 42.3244775,
           lon: -122.870815
         }
       }).then(function(data) {
         var jdata = JSON.parse(data);
+        console.log(jdata);
         assert(jdata.success);
         assert(jdata.trips.length > 0);
       });
@@ -57,10 +58,11 @@ describe('ontransit-server', function() {
     it('tripStops', function() {
 
       return rp({
-        uri: 'http://localhost:1234/tripStops',
+        uri: 'http://localhost:80/tripStops',
         qs: {
+          accuracy: 10,
           trip_id: 'b8efcaab-fdf5-4f27-988d-58d811a0397d',
-          trip_date: '2015-08-31',
+          trip_start_datetime: '2015-09-12T12:34:56Z',
           lat: 42.3244775,
           lon: -122.870815
         }
@@ -73,6 +75,6 @@ describe('ontransit-server', function() {
 
     });
 
-  })
+  });
 
 });

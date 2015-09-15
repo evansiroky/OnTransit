@@ -1,0 +1,3 @@
+{regular_user_name} ALL = NOPASSWD: ALL
+# User rules for {regular_user_name}
+{regular_user_name} ALL=(ALL) NOPASSWD:ALL

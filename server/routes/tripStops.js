@@ -11,6 +11,9 @@ var validateTripStopsJSON = validator({
     accuracy: {
       type: 'number'
     },
+    block_id: {
+      type: 'string'
+    },
     lat: {
       type: 'number',
       minimum: -90,
@@ -73,7 +76,12 @@ var calculateTripDelay = function(req, res, db) {
     //logging: console.log
   }).then(function(trip) {
     
-    if(trip.shape_gi.dataValues.distance > 400) {
+    if(!trip) {
+      res.send({
+        success: false,
+        error: 'Trip not found.'
+      });
+    } else if(trip.shape_gi.dataValues.distance > 400) {
       getDelay(req, res, db, 'Submitted point is too far from route to calculate delay.');
     } else {
       // distance to trip is acceptable, calculate approximate deviation
@@ -177,6 +185,7 @@ var calculateTripDelay = function(req, res, db) {
         // insert delay in DB
         db.trip_delay.upsert({
           trip_id: req.query.trip_id,
+          block_id: req.query.block_id,
           seconds_of_delay: delay
         }).then(function() {
           applyDelay(req, res, userLineFraction, 
@@ -189,10 +198,24 @@ var calculateTripDelay = function(req, res, db) {
 
 var getDelay = function(req, res, db, delayMsg) {
   // gets the delay from the db
+  var whereCondition;
+
+  if(req.query.block_id) {
+    whereCondition = {
+      $or: [
+        {
+          trip_id: req.query.trip_id
+        }, {
+          block_id: req.query.block_id
+        }
+      ]
+    };
+  } else {
+    whereCondition = { trip_id: req.query.trip_id };
+  }
+
   db.trip_delay.findOne({
-    where: {
-      trip_id: req.query.trip_id
-    }
+    where: whereCondition
   }).then(function(tripDelay) {
     var delay = tripDelay ? (tripDelay.seconds_of_delay ? tripDelay.seconds_of_delay : null) : null;
     if(delayMsg) {
@@ -325,6 +348,12 @@ var tripStopService = function(app, config) {
   gtfsWorker = GTFSWorker(config.pgWeb);
 
   app.get('/tripStops', function(req, res) {
+    if(req.query.trip_id) { req.query.trip_id = '' + req.query.trip_id; }
+    if(req.query.block_id) { 
+      req.query.block_id = '' + req.query.block_id; 
+    } else {
+      req.query.block_id = '';
+    }
     var valid = validateTripStopsJSON(req.query);
     if(!valid) {
       res.send(validateTripStopsJSON.errors);

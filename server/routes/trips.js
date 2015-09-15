@@ -44,10 +44,10 @@ var findTrips = function(req, res) {
   db.daily_trip.findAll({
     where: {
       start_datetime: {
-        lte: nowDate
+        lte: moment(nowDate).add(10, 'minutes').toDate()
       },
       end_datetime: {
-        gte: nowDate
+        gte: moment(nowDate).subtract(30, 'minutes').toDate()
       }
     },
     include: [
@@ -65,7 +65,8 @@ var findTrips = function(req, res) {
       [distanceAlias, 'ASC'],
       [db.route, 'route_short_name', 'ASC'],
       ['start_datetime', 'ASC']
-    ]
+    ],
+    //logging: console.log
   }).then(function(trips) {
     res.send({
       success: true,

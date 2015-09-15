@@ -19,7 +19,7 @@ var main = function(config, callback) {
 
   require('./routes')(app, config);
 
-  var server = app.listen(1234, function () {
+  var server = app.listen(3000, function () {
     var host = server.address().address;
     var port = server.address().port;
 

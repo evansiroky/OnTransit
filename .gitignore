@@ -53,9 +53,11 @@ docs/_build/
 target/
 
 #virtualenv (windows)
-/Include
-/Lib
-/Scripts
+deployer/data
+deployer/Include
+deployer/Lib
+deployer/Scripts
+deployer/pip-selfcheck.json
 
 #eclipse
 .project
@@ -68,6 +70,7 @@ server/node_modules
 #secrets
 server/config
 web/js/config.js
+deployer/config
 
 #web build folder
 web/dist
