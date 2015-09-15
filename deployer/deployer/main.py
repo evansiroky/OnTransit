@@ -323,8 +323,8 @@ class Fab:
             run('mkdir {0}'.format(self.script_dir))
             
         # check if data folder exists
-        if not exists(self.data):
-            run('mkdir {0}'.format(self.data))
+        if not exists(self.data_dir):
+            run('mkdir {0}'.format(self.data_dir))
             
         # prepare nightly update cron script
         with open(os.path.join(CONFIG_TEMPLATE_DIR, 'gtfs_refresh_crontab')) as f:
