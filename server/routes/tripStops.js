@@ -3,7 +3,7 @@ var moment = require('moment-timezone'),
   validator = require('is-my-json-valid'),
   GTFSWorker = require('../lib/gtfsWorker.js'),
   util = require('../lib/util.js'),
-  gtfsWorker;
+  config, gtfsWorker;
 
 var validateTripStopsJSON = validator({
   type: 'object',
@@ -11,8 +11,11 @@ var validateTripStopsJSON = validator({
     accuracy: {
       type: 'number'
     },
-    block_id: {
+    daily_block_id: {
       type: 'string'
+    },
+    daily_trip_id: {
+      type: 'number'
     },
     lat: {
       type: 'number',
@@ -27,16 +30,9 @@ var validateTripStopsJSON = validator({
       exclusiveMinimum: true,
       maximum: 180,
       exclusiveMaximum: true
-    },
-    trip_id: {
-      type: 'string'
-    },
-    trip_start_datetime: {
-      type: 'string',
-      format: 'date-time'
     }
   },
-  required: ['accuracy', 'lat', 'lon', 'trip_id', 'trip_start_datetime']
+  required: ['accuracy', 'daily_block_id', 'daily_trip_id', 'lat', 'lon']
 }, {
   verbose: true
 });
@@ -45,6 +41,11 @@ var calculateTripDelay = function(req, res, db) {
 
   //calculates crowdsourced trip delay using position from user
   //calls getTripStops after done calculating
+
+  if(req.query.accuracy > 200) {
+    getDelay(req, res, db, 'Poor device GPS accuracy.');
+    return;
+  }
 
   var point = util.makePoint(req.query.lat, req.query.lon),
     pointGeom = util.makePointGeom(db.sequelize, point),
@@ -57,9 +58,9 @@ var calculateTripDelay = function(req, res, db) {
       db.sequelize.literal('"shape_gi"."geom"::geography'), 
       db.sequelize.literal(pointGeog));
 
-  db.trip.findOne({
+  db.daily_trip.findOne({
     where: {
-      trip_id: req.query.trip_id
+      daily_trip_id: req.query.daily_trip_id
     },
     include: [{
         model: db.shape_gis,
@@ -74,14 +75,14 @@ var calculateTripDelay = function(req, res, db) {
       }
     ],
     //logging: console.log
-  }).then(function(trip) {
-    
-    if(!trip) {
+  }).then(function(dailyTrip) {
+
+    if(!dailyTrip) {
       res.send({
         success: false,
         error: 'Trip not found.'
       });
-    } else if(trip.shape_gi.dataValues.distance > 400) {
+    } else if(dailyTrip.shape_gi.dataValues.distance > 400) {
       getDelay(req, res, db, 'Submitted point is too far from route to calculate delay.');
     } else {
       // distance to trip is acceptable, calculate approximate deviation
@@ -96,7 +97,7 @@ var calculateTripDelay = function(req, res, db) {
             'line_fraction']
         ],
         where: {
-          trip_id: req.query.trip_id
+          trip_id: dailyTrip.trip_id
         },
         include: [{
             model: db.trip,
@@ -116,9 +117,9 @@ var calculateTripDelay = function(req, res, db) {
       }).then(function(stopTimes) {
 
         // calculate current seconds after midnight
-        var userLineFraction = trip.shape_gi.dataValues.line_fraction,
+        var userLineFraction = dailyTrip.shape_gi.dataValues.line_fraction,
           tripTz = stopTimes[0].trip.route.agency.agency_timezone,
-          tripStartDateTime = moment.tz(req.query.trip_start_datetime, tripTz),
+          tripStartDateTime = moment.tz(dailyTrip.start_datetime, tripTz),
           now = moment().tz(tripTz),
           nowSeconds = now.hours() * 3600 + now.minutes() * 60 + now.seconds();
 
@@ -183,12 +184,11 @@ var calculateTripDelay = function(req, res, db) {
           delay = nowSeconds - pointSeconds;
 
         // insert delay in DB
-        db.trip_delay.upsert({
-          trip_id: req.query.trip_id,
-          block_id: req.query.block_id,
+        db.block_delay.upsert({
+          daily_block_id: req.query.daily_block_id,
           seconds_of_delay: delay
         }).then(function() {
-          applyDelay(req, res, userLineFraction, 
+          applyDelay(req, res, dailyTrip.start_datetime, userLineFraction, tripTz,
             stopTimes, delay, 'Delay has been calculated based on your position.');
         });
       });
@@ -198,26 +198,13 @@ var calculateTripDelay = function(req, res, db) {
 
 var getDelay = function(req, res, db, delayMsg) {
   // gets the delay from the db
-  var whereCondition;
 
-  if(req.query.block_id) {
-    whereCondition = {
-      $or: [
-        {
-          trip_id: req.query.trip_id
-        }, {
-          block_id: req.query.block_id
-        }
-      ]
-    };
-  } else {
-    whereCondition = { trip_id: req.query.trip_id };
-  }
-
-  db.trip_delay.findOne({
-    where: whereCondition
-  }).then(function(tripDelay) {
-    var delay = tripDelay ? (tripDelay.seconds_of_delay ? tripDelay.seconds_of_delay : null) : null;
+  db.block_delay.findOne({
+    where: {
+      daily_block_id: req.query.daily_block_id
+    }
+  }).then(function(blockDelay) {
+    var delay = blockDelay ? (blockDelay.seconds_of_delay ? blockDelay.seconds_of_delay : null) : null;
     if(delayMsg) {
       delayMsg += '  ';
     } else {
@@ -233,23 +220,41 @@ var getDelay = function(req, res, db, delayMsg) {
         pointGeom)
 
     // calculate line fraction
-    db.trip.findOne({
+    db.daily_trip.findOne({
       where: {
-        trip_id: req.query.trip_id
+        daily_trip_id: req.query.daily_trip_id
       },
       include: [{
         model: db.shape_gis,
         attributes: [
           [locatePointFn, 'line_fraction']
         ]
+      }, {
+        model: db.route,
+        include: [db.agency]
       }]
-    }).then(function(trip) {
-      getTripStops(req, res, db, trip.shape_gi.dataValues.line_fraction, delay, delayMsg);
+    }).then(function(dailyTrip) {
+      if(!dailyTrip) {
+        res.send({
+          success: false,
+          error: 'Trip not found.'
+        });
+      } else {
+        getTripStops(req, 
+          res, 
+          db, 
+          dailyTrip.trip_id,
+          dailyTrip.start_datetime,
+          dailyTrip.shape_gi.dataValues.line_fraction, 
+          dailyTrip.route.agency.agency_timezone,
+          delay, 
+          delayMsg);
+      }
     })
   });
 }
 
-var getTripStops = function(req, res, db, userLocationLineFraction, delay, delayMsg) {
+var getTripStops = function(req, res, db, trip_id, tripStartDatetime, userLocationLineFraction, tz, delay, delayMsg) {
 
   // gets the trip's stops and applies delay
   // (if delay is crowdsourced, doesn't make extra trip to db)
@@ -264,33 +269,35 @@ var getTripStops = function(req, res, db, userLocationLineFraction, delay, delay
         'line_fraction']
     ],
     where: {
-      trip_id: req.query.trip_id
+      trip_id: trip_id
     },
     include: [{
         model: db.trip,
-        include: [{
-            model: db.route,
-            include: [db.agency]
-          }, 
-          db.shape_gis,
-        ]
+        include: [db.shape_gis]
       },
-      db.stop 
+      db.stop
     ],
     order: [
       ['stop_sequence', 'ASC']
     ],
     //logging: console.log
   }).then(function(stopTimes) {
-    applyDelay(req, res, userLocationLineFraction, stopTimes, delay, delayMsg);
+    if(!stopTimes) {
+      res.send({
+        success: false,
+        error: 'No stops found.'
+      });
+    } else {
+      applyDelay(req, res, tripStartDatetime, userLocationLineFraction, tz, stopTimes, delay, delayMsg);
+    }
   });
 
 }
 
-var applyDelay = function(req, res, userLocationLineFraction, stopTimes, delay, delayMsg) {
+var applyDelay = function(req, res, tripStartDatetime, userLocationLineFraction, tz, stopTimes, delay, delayMsg) {
   // adds the delay to the stop times
 
-  var tripDate = moment.tz(req.query.trip_date, stopTimes[0].trip.route.agency.agency_timezone),
+  var tripDate = moment.tz(tripStartDatetime, tz),
     stops = [],
     stopsWithoutTiming = [],
     lastStopWithTiming;
@@ -343,17 +350,13 @@ var applyDelay = function(req, res, userLocationLineFraction, stopTimes, delay, 
   });
 }
 
-var tripStopService = function(app, config) {
+var tripStopService = function(app, _config) {
 
+  config = _config;
   gtfsWorker = GTFSWorker(config.pgWeb);
 
   app.get('/tripStops', function(req, res) {
-    if(req.query.trip_id) { req.query.trip_id = '' + req.query.trip_id; }
-    if(req.query.block_id) { 
-      req.query.block_id = '' + req.query.block_id; 
-    } else {
-      req.query.block_id = '';
-    }
+    if(req.query.daily_block_id) { req.query.daily_block_id = '' + req.query.daily_block_id; }
     var valid = validateTripStopsJSON(req.query);
     if(!valid) {
       res.send(validateTripStopsJSON.errors);

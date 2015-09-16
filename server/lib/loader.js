@@ -8,16 +8,232 @@ module.exports = function(dbconfig, loaderCallback) {
 
   var db = gtfsWorker.getConnection();
 
+  // prepare copy attributes
+  var stopTimeAttrs = Object.keys(db.stop_time.attributes),
+    tripAttrs = Object.keys(db.trip.attributes),
+    days;
+
+  delete stopTimeAttrs.departure_time;
+  delete stopTimeAttrs.arrival_time;
+  delete stopTimeAttrs.createdAt;
+  delete stopTimeAttrs.updatedAt;
+
+  delete tripAttrs.createdAt;
+  delete tripAttrs.createdAt;
+
+  var dailyTripInserter = async.cargo(function(dailyTrips, inserterCallback) {
+      db.daily_trip.bulkCreate(dailyTrips).then(function() {
+        inserterCallback();
+      });
+    },
+    1000
+  );
+
+  var dailyStopTimeInserter = async.cargo(function(dailyStopTimes, inserterCallback) {
+      db.daily_stop_time.bulkCreate(dailyStopTimes).then(function() {
+        inserterCallback();
+      });
+    },
+    1000
+  );
+
   var createAppModels = function(callback) {
     console.log('creating app models');
-    db.daily_trip.sync({ force: true }).then(function() {
-      db.trip_delay.sync({ force: true }).then(function() {
-        callback();
+    db.block_delay.sync({ force: true }).then(function() {
+      db.daily_trip.sync({ force: true }).then(function() {
+        db.daily_stop_time.sync({ force: true }).then(function() {
+          db.sequelize.query('DROP SEQUENCE IF EXISTS daily_trip_id_seq;' +
+            'CREATE SEQUENCE daily_trip_id_seq;' +
+            'GRANT USAGE ON SEQUENCE daily_trip_id_seq TO ' + dbconfig.workerUserName + ';').then(function() {
+            callback();
+          });
+        });
       });
     });
   };
 
-  var calculateDailyTrips = function(callback) {
+  var insertDailyStopTime = function(curTripDate, stopTime) {
+    stopTime.arrival_datetime = moment(curTripDate).add(stopTime.arrivalSeconds, 'seconds').toDate();
+    stopTime.departure_datetime = moment(curTripDate).add(stopTime.departureSeconds, 'seconds').toDate();
+    delete stopTime.arrivalSeconds;
+    delete stopTime.departureSeconds;
+    dailyStopTimeInserter.push(stopTime);
+  };
+
+  var prepareStopTimes = function(curTripDate, dailyTripId, stopTimes) {
+    // calculate items for dailyStopTime
+    var stopsWithoutTiming = [],
+      lastStopWithTiming,
+      i, j;
+
+    for (i = 0; i < stopTimes.length; i++) {
+      var dailyStopTime = {
+        daily_trip_id: dailyTripId,
+        departureSeconds: stopTimes[i].departure_time,
+        arrivalSeconds: stopTimes[i].arrival_time,
+        lineFraction: stopTimes[i].dataValues.line_fraction
+      };
+
+      for (j = 0; j < stopTimeAttrs.length; j++) {
+        dailyStopTime[stopTimeAttrs[j]] = stopTimes[i][stopTimeAttrs[j]];
+      };        
+
+      if(!dailyStopTime.departureSeconds) {
+        dailyStopTime.departureSeconds = dailyStopTime.arrivalSeconds;
+      }
+
+      if(!dailyStopTime.arrivalSeconds) {
+        dailyStopTime.arrivalSeconds = dailyStopTime.departureSeconds;
+      }
+
+      if(!dailyStopTime.departureSeconds) {
+        stopsWithoutTiming.push(dailyStopTime);
+      } else {
+        if(stopsWithoutTiming.length > 0) {
+          // calculate difference between the known schedule
+          var fractionOfTravel = dailyStopTime.lineFraction - lastStopWithTiming.lineFraction,
+            secondsOfTravel = dailyStopTime.arrivalSeconds - lastStopWithTiming.departureSeconds;
+          for (j = 0; j < stopsWithoutTiming.length; j++) {
+            var travelFromLastStopWithTiming = stopsWithoutTiming[j].lineFraction - lastStopWithTiming.lineFraction,
+              pctOfTravel = travelFromLastStopWithTiming / fractionOfTravel,
+              stopSeconds = Math.round(pctOfTravel * secondsOfTravel + lastStopWithTiming.departureSeconds);
+            stopsWithoutTiming[j].departureSeconds = stopSeconds;
+            stopsWithoutTiming[j].arrivalSeconds = stopSeconds;
+            insertDailyStopTime(curTripDate, stopsWithoutTiming[j]);
+          };
+          stopsWithoutTiming = [];
+        }
+        insertDailyStopTime(curTripDate, dailyStopTime);
+        lastStopWithTiming = dailyStopTime;
+      }
+    };
+  };
+
+  var calculateDailyTripsAndStopTimesForServiceId = function (calendarDate, serviceDefCallback) {
+    // calculates begin and end datetimes for trips belonging to valid service ids
+
+    // iterate through each day to determine if any days active
+    var validServices = [];
+
+    for (var i = 0; i < days.length; i++) {
+      var dayValid = false,
+        dayOfWeek = days[i].format('dddd').toLowerCase();
+
+      // check regular calendar
+      if(calendarDate[dayOfWeek]) {
+        dayValid = true;
+      }
+
+      // check for any exceptions
+      if(calendarDate.calendar_dates.length > 0) {
+        for (var j = 0; j < calendarDate.calendar_dates.length; j++) { 
+          var exceptionDate = moment(calendarDate.calendar_dates[0].date);
+          if(days[i].isSame(exceptionDate, 'day')) {
+            if(calendarDate.calendar_dates[j].exception_type === 2) {
+              dayValid = false;
+            } else if(calendarDate.calendar_dates[j].exception_type === 1) {
+              dayValid = true;
+            }
+          }
+        }
+      }
+
+      if(dayValid) {
+        validServices.push({ 
+          service_id: calendarDate.service_id, 
+          date: days[i]
+        });
+      }
+    };
+
+    async.each(validServices,
+      function(validService, serviceCallback) {
+        // calculate all trips for specified date and service id  
+        db.trip.findAll({
+          where: {
+            service_id: validService.service_id
+          },
+          include: [{
+              model: db.route,
+              include: [db.agency]
+            }
+          ]
+        }).then(function(trips) {
+          if(trips.length > 0) {
+            var tripDate = validService.date.format('YYYY-MM-DD');
+
+            console.log('adding trips and stop times for service_id `' + validService.service_id + '` on ' + tripDate);
+            
+            async.each(trips, function(curTrip, itemCallback) {
+              var copyTrip = {},
+                curTripDate = moment.tz(tripDate, curTrip.route.agency.agency_timezone);
+
+              for (var i = 0; i < tripAttrs.length; i++) {
+                copyTrip[tripAttrs[i]] = curTrip[tripAttrs[i]];
+              };
+
+              // find first and last stop times
+              db.stop_time.findAll({
+                where: {
+                  trip_id: curTrip.trip_id
+                },
+                include: [
+                  {
+                    model: db.trip,
+                    include: [
+                      {
+                        model: db.shape_gis,
+                        attributes: [
+                          [db.sequelize.fn('ST_LineLocatePoint',
+                             db.sequelize.literal('"trip.shape_gi"."geom"'),
+                             db.sequelize.literal('"stop"."geom"')),
+                           'line_fraction']
+                        ]
+                      }
+                    ]
+                  }, 
+                  db.stop
+                ],
+                order: [
+                  ['stop_sequence', 'ASC']
+                ],
+                //logging: console.log
+              }).then(function(stopTimes) {
+
+                // calculate start and end of daily trip
+                copyTrip.daily_block_id = tripDate + copyTrip.block_id ? copyTrip.block_id : copyTrip.trip_id;
+                copyTrip.start_datetime = moment(curTripDate).add(stopTimes[0].departure_time, 'seconds').toDate();
+                copyTrip.end_datetime = moment(curTripDate).add(stopTimes[stopTimes.length - 1].arrival_time, 'seconds').toDate();
+
+                // get next sequence value for daily_trip_id
+                db.sequelize.query("SELECT nextval('daily_trip_id_seq')", {
+                  type: db.sequelize.QueryTypes.SELECT
+                }).then(function(result) {
+
+                  var dailyTripId = parseInt(result[0].nextval, 10);
+
+                  copyTrip.daily_trip_id = dailyTripId;
+                  dailyTripInserter.push(copyTrip);
+
+                  prepareStopTimes(curTripDate, dailyTripId, stopTimes);                  
+
+                  itemCallback();
+
+                });
+
+              });
+            },
+            serviceCallback);
+          } else {
+            serviceCallback();
+          }
+        });
+      },
+      serviceDefCallback
+    );
+  };
+
+  var calculateDailyTripsAndStopTimes = function(callback) {
     // calculates begin and end datetimes for all trips plus or minus 72 hours from now
     console.log('calculating daily trips');
 
@@ -30,109 +246,9 @@ module.exports = function(dbconfig, loaderCallback) {
     var yesterday = moment(today).subtract(1, 'days'),
       tomorrow = moment(today).add(1, 'days'),
       yesterdayDate = yesterday.toDate(),
-      tomorrowDate = tomorrow.toDate(),
-      days = [yesterday, today, tomorrow];
-
-    var tripInserter = async.cargo(function(dailyTrips, inserterCallback) {
-        //console.log(dailyTrips[0]);
-        db.daily_trip.bulkCreate(dailyTrips).then(function() {
-          inserterCallback();
-        });
-      },
-      1000
-    );
-
-    var calculateDailyTripsForServiceId = function (calendarDate, serviceDefCallback) {
-      // calculates begin and end datetimes for trips belonging to valid service ids
-
-      // iterate through each day to determine if any days active
-      var validServices = [];
-
-      for (var i = 0; i < days.length; i++) {
-        var dayValid = false,
-          dayOfWeek = days[i].format('dddd').toLowerCase();
-
-        // check regular calendar
-        if(calendarDate[dayOfWeek]) {
-          dayValid = true;
-        }
-
-        // check for any exceptions
-        if(calendarDate.calendar_dates.length > 0) {
-          for (var j = 0; j < calendarDate.calendar_dates.length; j++) { 
-            var exceptionDate = moment(calendarDate.calendar_dates[0].date);
-            if(days[i].isSame(exceptionDate, 'day')) {
-              if(calendarDate.calendar_dates[j].exception_type === 2) {
-                dayValid = false;
-              } else if(calendarDate.calendar_dates[j].exception_type === 1) {
-                dayValid = true;
-              }
-            }
-          }
-        }
-
-        if(dayValid) {
-          validServices.push({ 
-            service_id: calendarDate.service_id, 
-            date: days[i]
-          });
-        }
-      };
-
-      async.each(validServices,
-        function(validService, serviceCallback) {
-          // calculate all trips for specified date and service id  
-          db.trip.findAll({
-            where: {
-              service_id: validService.service_id
-            },
-            include: [{
-                model: db.route,
-                include: [db.agency]
-              }
-            ]
-          }).then(function(trips) {
-            if(trips.length > 0) {
-              var tripAttrs = Object.keys(db.trip.attributes),
-                tripDate = validService.date.format('YYYY-MM-DD');
-
-              console.log('adding trips for service_id `' + validService.service_id + '` on ' + tripDate);
-              
-              delete tripAttrs.createdAt;
-              delete tripAttrs.updatedAt;
-
-              async.each(trips, function(curTrip, itemCallback) {
-                var copyTrip = {},
-                  curTripDate = moment.tz(tripDate, curTrip.route.agency.agency_timezone);
-
-                for (var i = 0; i < tripAttrs.length; i++) {
-                  copyTrip[tripAttrs[i]] = curTrip[tripAttrs[i]];
-                };
-
-                // find first and last stop times
-                db.stop_time.findAll({
-                  where: {
-                    trip_id: curTrip.trip_id
-                  },
-                  order: [
-                    ['stop_sequence', 'ASC']
-                  ]
-                }).then(function(stop_times) {
-                  copyTrip.start_datetime = moment(curTripDate).add(stop_times[0].departure_time, 'seconds').toDate();
-                  copyTrip.end_datetime = moment(curTripDate).add(stop_times[stop_times.length - 1].arrival_time, 'seconds').toDate();
-                  tripInserter.push(copyTrip);
-                  itemCallback();
-                });
-              },
-              serviceCallback);
-            } else {
-              serviceCallback();
-            }
-          });
-        },
-        serviceDefCallback
-      );
-    };
+      tomorrowDate = tomorrow.toDate();
+    
+    days = [yesterday, today, tomorrow];
 
     // find valid service ids plus or minus 1 day from now
     db.calendar.findAll({
@@ -158,12 +274,27 @@ module.exports = function(dbconfig, loaderCallback) {
 
       // iterate through each service definition
       async.each(calendarDates, 
-        calculateDailyTripsForServiceId, 
+        calculateDailyTripsAndStopTimesForServiceId, 
         function(err) {
           if(err) {
             callback(err);
           } else {
-            tripInserter.drain = callback;
+            var dailyTripsDone = false,
+              dailyStopTimesDone = false,
+              insertersDoneCallback = function() {
+                if(dailyTripsDone && dailyStopTimesDone) {
+                  callback();
+                }
+              }
+            dailyTripInserter.drain = function() {
+              dailyTripsDone = true;
+              insertersDoneCallback();
+            };
+
+            dailyStopTimeInserter.drain = function() {
+              dailyStopTimesDone = true;
+              insertersDoneCallback();
+            };
           }
         }
       );
@@ -191,7 +322,8 @@ module.exports = function(dbconfig, loaderCallback) {
       'transfer',
       'trip',
       'daily_trip',
-      'trip_delay'];
+      'daily_stop_time',
+      'block_delay'];
 
     var grantWorker = async.queue(function(table, queueCallback) {
       db.sequelize.query('GRANT SELECT ON TABLE ' + table + ' TO GROUP "' + dbconfig.webUsername + '"').then(function() {
@@ -206,7 +338,7 @@ module.exports = function(dbconfig, loaderCallback) {
       grantWorker.push(tables[i]);
     };
     grantWorker.drain = function() {
-      db.sequelize.query('GRANT SELECT, INSERT, UPDATE ON TABLE trip_delay TO GROUP "' + dbconfig.webUsername + '"').then(function() {
+      db.sequelize.query('GRANT SELECT, INSERT, UPDATE ON TABLE block_delay TO GROUP "' + dbconfig.webUsername + '"').then(function() {
         seriesCallback();
       });
     }
@@ -220,7 +352,7 @@ module.exports = function(dbconfig, loaderCallback) {
         gtfsWorker.loadGtfs(cb);
       },
       createAppModels,
-      calculateDailyTrips,
+      calculateDailyTripsAndStopTimes,
       grantWebUserPermissions
     ],
     function(err, results) {

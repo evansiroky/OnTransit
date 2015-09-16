@@ -1,5 +1,9 @@
 module.exports = function(sequelize, DataTypes) {
   var DailyTrip = sequelize.define("daily_trip", {
+    daily_trip_id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true
+    },
     route_id: {
       type: DataTypes.STRING(255),
       references: {
@@ -14,14 +18,12 @@ module.exports = function(sequelize, DataTypes) {
         key: "service_id"
       }
     },
-    trip_id: {
-      type: DataTypes.STRING(255),
-      primaryKey: true
-    },
+    trip_id: DataTypes.STRING(255),
     trip_headsign: DataTypes.STRING(255),
     trip_short_name: DataTypes.STRING(100),
     direction_id: DataTypes.INTEGER,
     block_id: DataTypes.STRING(255),
+    daily_block_id: DataTypes.STRING(255),
     shape_id: {
       type: DataTypes.STRING(255), 
       references: {
@@ -31,10 +33,7 @@ module.exports = function(sequelize, DataTypes) {
     },
     wheelchair_accessible: DataTypes.INTEGER,
     bikes_allowed: DataTypes.INTEGER,
-    start_datetime: {
-      type: DataTypes.DATE,
-      primaryKey: true
-    },
+    start_datetime: DataTypes.DATE,
     end_datetime: DataTypes.DATE
   }, {
     freezeTableName: true,
@@ -44,6 +43,12 @@ module.exports = function(sequelize, DataTypes) {
         DailyTrip.belongsTo(models.route, {
           foreignKeyContraint: true, 
           foreignKey: "route_id" 
+        });
+
+        DailyTrip.belongsTo(models.block_delay, {
+          foreignKeyContraint: false,
+          constraints: false,
+          foreignKey: "daily_block_id" 
         });
 
         DailyTrip.belongsTo(models.calendar, {
@@ -58,6 +63,10 @@ module.exports = function(sequelize, DataTypes) {
 
         DailyTrip.hasMany(models.stop_time, {
           foreignKey: 'trip_id'
+        });
+
+        DailyTrip.hasMany(models.daily_stop_time, {
+          foreignKey: 'daily_trip_id'
         });
 
         DailyTrip.hasMany(models.frequency, {

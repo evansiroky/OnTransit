@@ -2,7 +2,7 @@ var validator = require('is-my-json-valid'),
   moment = require('moment-timezone'),
   GTFSWorker = require('../lib/gtfsWorker.js'),
   util = require('../lib/util.js'),
-  gtfsWorker;
+  config, gtfsWorker;
 
 var validateTripJSON = validator({
   type: 'object',
@@ -27,7 +27,7 @@ var validateTripJSON = validator({
   verbose: true
 });
 
-var findTrips = function(req, res) {
+var findTrips = function(req, res, config) {
   // find all trips close to a given lat/lon at the current datetime
   //var now = moment(),
   var now = moment(),
@@ -84,8 +84,9 @@ var findTrips = function(req, res) {
   
 };
 
-var tripService = function(app, config) {
+var tripService = function(app, _config) {
 
+  config = _config;
   gtfsWorker = GTFSWorker(config.pgWeb);
 
   app.get('/trips', function(req, res) {

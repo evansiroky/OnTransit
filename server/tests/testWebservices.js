@@ -31,7 +31,7 @@ describe('ontransit-server', function() {
 
     it('index.html', function() {
 
-      return rp('http://localhost:80/').then(function(data) {
+      return rp('http://localhost:3000/').then(function(data) {
         assert(data.indexOf('src="main.js"') > -1);
         assert(data.indexOf('href="main.css"') > -1);
       });
@@ -41,34 +41,73 @@ describe('ontransit-server', function() {
     it('trips', function() {
 
       return rp({
-        uri: 'http://localhost:80/trips',
+        uri: 'http://localhost:3000/trips',
         qs: {
           lat: 42.3244775,
           lon: -122.870815
         }
       }).then(function(data) {
         var jdata = JSON.parse(data);
-        console.log(jdata);
+        //console.log(jdata);
         assert(jdata.success);
         assert(jdata.trips.length > 0);
       });
 
     });
 
-    it('tripStops', function() {
+    it('tripStops - good accuracy', function() {
 
       return rp({
-        uri: 'http://localhost:80/tripStops',
+        uri: 'http://localhost:3000/tripStops',
         qs: {
           accuracy: 10,
-          trip_id: 'b8efcaab-fdf5-4f27-988d-58d811a0397d',
-          trip_start_datetime: '2015-09-12T12:34:56Z',
+          daily_trip_id: 1,
+          daily_block_id: '2015-09-1450',
           lat: 42.3244775,
           lon: -122.870815
         }
       }).then(function(data) {
         var jdata = JSON.parse(data);
-        console.log(jdata);
+        //console.log(jdata);
+        //console.log(jdata.delayMsg);
+        assert(jdata.success);
+        assert(jdata.stops.length > 0);
+      });
+
+    });
+
+    it('tripStops - bad accuracy', function() {
+
+      return rp({
+        uri: 'http://localhost:3000/tripStops',
+        qs: {
+          accuracy: 1000,
+          daily_trip_id: 1,
+          daily_block_id: '2015-09-1450',
+          lat: 42.3244775,
+          lon: -122.870815
+        }
+      }).then(function(data) {
+        var jdata = JSON.parse(data);
+        //console.log(jdata);
+        //console.log(jdata.delayMsg);
+        assert(jdata.success);
+        assert(jdata.stops.length > 0);
+      });
+
+    });
+
+    it('nearbyStops', function() {
+
+      return rp({
+        uri: 'http://localhost:3000/nearbyStops',
+        qs: {
+          lat: 42.3244775,
+          lon: -122.870815
+        }
+      }).then(function(data) {
+        var jdata = JSON.parse(data);
+        //console.log(jdata);
         assert(jdata.success);
         assert(jdata.stops.length > 0);
       });
