@@ -1,4 +1,5 @@
 var $ = require('jquery'),
+  analytics = require('ga-browser')(),
   Backbone = require('backbone');
 
 module.exports = function(app) {
@@ -19,17 +20,29 @@ module.exports = function(app) {
 
     home: function() {
       // console.log('router home');
+      analytics('send', 'pageview', {
+        page: '/',
+        title: 'Home'
+      });
       this.changePage('#home');
     },
 
     nearbyStops: function() {
-      console.log('router nearbyStops');
+      // console.log('router nearbyStops');
+      analytics('send', 'pageview', {
+        page: '/nearbyStops',
+        title: 'Nearby Stops'
+      });
       this.changePage('#nearby_stops');
       app.views.nearbyStops.locateNearbyStops();
     },
 
     findTrips: function() {
       // console.log('router findTrips');
+      analytics('send', 'pageview', {
+        page: '/findTrips',
+        title: 'Find Trips'
+      });
       this.changePage('#find_trips');
       app.views.findTrips.locateNearbyTrips();
     },
@@ -37,6 +50,10 @@ module.exports = function(app) {
     tripDetails: function() {
       // console.log('router tripDetails');
       if(app.curDailyTripId) {
+        analytics('send', 'pageview', {
+          page: '/tripDetails',
+          title: 'Trip Details'
+        });
         this.changePage('#trip_details');
         app.views.tripDetails.getTripStops();
       } else {
@@ -46,6 +63,10 @@ module.exports = function(app) {
 
     feedback: function() {
       // console.log('router feedback');
+      analytics('send', 'pageview', {
+        page: '/feedback',
+        title: 'Feedback'
+      });
       this.changePage('#feedback');
     },
 
