@@ -1,5 +1,8 @@
 var config = {};
 
+// Number of minutes to keep delay calculations
+config.block_delay_delete_threshold = 10;
+
 // Crowdsourcing
 config.crowdsourceDelay = true;
 

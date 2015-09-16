@@ -1,0 +1,2 @@
+MAILTO={cron_email}
+*/5 0-2,4-23 * * * (cd /home/{user}/{ontransit_base_folder}/server; npm run purgeBlockDelay)

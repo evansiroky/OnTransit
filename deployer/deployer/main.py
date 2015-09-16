@@ -263,11 +263,16 @@ class Fab:
         
         # upload server config
         server_data = dict(gtfs_static_url=self.gtfs_conf.get('gtfs_static_url'),
+                           block_delay_delete_threshold=self.ontransit_conf.get('block_delay_delete_threshold'),
                            database_name=self.ontransit_conf.get('database_name'),
+                           nearby_stop_future_padding=self.ontransit_conf.get('nearby_stop_future_padding'),
+                           nearby_stop_past_padding=self.ontransit_conf.get('nearby_stop_past_padding'),
                            pg_worker_username=self.ontransit_conf.get('pg_worker_username'),
                            pg_worker_password=self.ontransit_conf.get('pg_worker_password'),
                            pg_web_username=self.ontransit_conf.get('pg_web_username'),
-                           pg_web_password=self.ontransit_conf.get('pg_web_password'))
+                           pg_web_password=self.ontransit_conf.get('pg_web_password'),
+                           trip_end_padding=self.ontransit_conf.get('trip_end_padding'),
+                           trip_start_padding=self.ontransit_conf.get('trip_start_padding'))
         put(write_template(server_data, 
                            'server_config_index.js', 
                            'index.js'), 
@@ -314,10 +319,6 @@ class Fab:
         '''Install cron scripts to make sure ontransit data is up-to-date.
         '''
         
-        # prepare update script
-        refresh_settings = dict(user=self.user,
-                                ontransit_base_folder=self.ontransit_base_folder)
-        
         # check if script folder exists
         if not exists(self.script_dir):
             run('mkdir {0}'.format(self.script_dir))
@@ -328,15 +329,26 @@ class Fab:
             
         # prepare nightly update cron script
         with open(os.path.join(CONFIG_TEMPLATE_DIR, 'gtfs_refresh_crontab')) as f:
-            refresh_cron_template = f.read()
+            cron_template = f.read()
             
         cron_settings = dict(cron_email=self.aws_conf.get('cron_email'),
                              logfile=unix_path_join(self.data_dir, 'nightly_refresh.out'),
                              user=self.user,
                              ontransit_base_folder=self.ontransit_base_folder)
-        gtfs_refresh_cron = refresh_cron_template.format(**cron_settings)
+        cron = cron_template.format(**cron_settings)
             
-        crontab_update(gtfs_refresh_cron, 'gtfs_refresh_cron')
+        crontab_update(cron, 'gtfs_refresh_cron')
+        
+        # prepare block delay purge cron script
+        with open(os.path.join(CONFIG_TEMPLATE_DIR, 'block_delay_purge_crontab')) as f:
+            cron_template = f.read()
+            
+        cron_settings = dict(cron_email=self.aws_conf.get('cron_email'),
+                             user=self.user,
+                             ontransit_base_folder=self.ontransit_base_folder)
+        cron = cron_template.format(**cron_settings)
+            
+        crontab_update(cron, 'block_delay_purge_cron')
         
     def stop_server(self):
         '''Stops the OnTransit server.

@@ -121,10 +121,23 @@ var calculateTripDelay = function(req, res, db) {
           tripTz = stopTimes[0].trip.route.agency.agency_timezone,
           tripStartDateTime = moment.tz(dailyTrip.start_datetime, tripTz),
           now = moment().tz(tripTz),
-          nowSeconds = now.hours() * 3600 + now.minutes() * 60 + now.seconds();
+          nowSeconds = now.hours() * 3600 + now.minutes() * 60 + now.seconds(),
+          nowDay = moment(now),
+          tripStartDay = moment(tripStartDateTime);
 
-        if(now.diff(tripStartDateTime, 'days') > 0) {
-          nowSeconds += 86400;
+        nowDay.set('hours', 0);
+        nowDay.set('minutes', 0);
+        nowDay.set('seconds', 0);
+
+        tripStartDay.set('hours', 0);
+        tripStartDay.set('minutes', 0);
+        tripStartDay.set('seconds', 0);
+
+        var dayDiff = nowDay.diff(tripStartDay, 'days');
+
+        if(dayDiff < 0) {
+          // now is next day
+          nowSeconds += dayDiff * 86400;
         }
 
         // find closest 2 stop_times to userPosition
