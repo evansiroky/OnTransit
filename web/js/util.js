@@ -32,6 +32,12 @@ util.getLocation = function(successCallback, errorCallback) {
 };
 
 util.reverseGeocode = function(app, position, cb) {
+  
+  if(!app.geocoder) {
+    cb();
+    return;
+  }
+
   app.geocoder.geocode({
       location: {
         lat: position.coords.latitude,
