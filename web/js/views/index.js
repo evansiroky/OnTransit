@@ -6,5 +6,6 @@ module.exports = function(app) {
   app.views.findTrips = require('./findTrips.js')(app);
   app.views.tripDetails = require('./tripDetails.js')(app);
   app.views.feedback = require('./feedback.js')(app);
+  app.views.about = require('./about.js')(app);
 
 }

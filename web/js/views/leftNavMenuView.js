@@ -8,7 +8,8 @@ module.exports = function(app) {
       'click .left_nav_home': 'homeClick',
       'click .left_nav_nearby_stops': 'nearbyStopsClick',
       'click .left_nav_find_trips': 'findTripsClick',
-      'click .left_nav_feedback': 'feedbackClick'
+      'click .left_nav_feedback': 'feedbackClick',
+      'click .left_nav_about': 'aboutClick'
     },
 
     homeClick: function() {
@@ -29,6 +30,11 @@ module.exports = function(app) {
     feedbackClick: function() {
       //console.log('feedbackClick');
       app.router.navigate('feedback/', { trigger: true });
+    },
+
+    aboutClick: function() {
+      //console.log('aboutClick');
+      app.router.navigate('about/', { trigger: true });
     }
 
   });

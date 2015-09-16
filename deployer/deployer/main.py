@@ -239,7 +239,8 @@ class Fab:
         run('ln -s /usr/local/node/bin/npm /usr/bin/npm')
         
         # install forever to run server continuously
-        sudo('npm install forever -g')        
+        sudo('npm install forever -g')
+        sudo('ln -s /usr/local/node/bin/forever /usr/bin/forever')   
         
     def setup_iptables(self):
         '''Adds in iptables rules to forward 80 to 3000.

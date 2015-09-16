@@ -15,7 +15,8 @@ module.exports = function(app) {
       "nearbyStops/": "nearbyStops",
       "findTrips/": "findTrips",
       "tripDetails/": "tripDetails",
-      "feedback/": "feedback"
+      "feedback/": "feedback",
+      "about/": "about"
     },
 
     home: function() {
@@ -68,6 +69,15 @@ module.exports = function(app) {
         title: 'Feedback'
       });
       this.changePage('#feedback');
+    },
+
+    about: function() {
+      // console.log('router feedback');
+      analytics('send', 'pageview', {
+        page: '/about',
+        title: 'About'
+      });
+      this.changePage('#about');
     },
 
     changePage: function(el) {
