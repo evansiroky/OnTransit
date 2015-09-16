@@ -19,6 +19,10 @@ util.makePointGeom = function(sequelize, point) {
   return sequelize.fn('ST_GeomFromGeoJSON', JSON.stringify(point) );
 }
 
+util.makeLiteralPointGeom = function(point) {
+  return "ST_GeomFromGeoJSON('" + JSON.stringify(point) + "')";
+}
+
 util.makePointGeog = function(point) {
   return "ST_GeomFromGeoJSON('" + JSON.stringify(point) + "')::geography";
 }

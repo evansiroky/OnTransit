@@ -43,19 +43,37 @@ var findStops = function(req, res) {
       distanceAlias = db.sequelize.literal('"distance"');
 
   db.stop.findAll({
-    attributes: ['stop_name',
+    attributes: ['stop_id',
+      'stop_name',
       [distanceFn, 'distance']
     ],
-    where: db.sequelize.fn('ST_DWithin',
-      db.sequelize.literal('"stop"."geom"::geography'),
-      db.sequelize.literal(pointGeog),
-      1200
-    ),
-    include: [
-      {
-        model: db.daily_stop_time,
-        include: [
-          {
+    order: [
+      [db.sequelize.literal('"stop"."geom" <-> ' + util.makeLiteralPointGeom(point))]
+    ],
+    limit: 10,
+    //logging: console.log
+  }).then(function(stops) {
+    var stopsOut = [],
+      headsigns = [];
+
+    async.each(stops,
+      function(stop, itemCallback) {
+        var stopHeadsigns = [],
+          stopData = {
+            stop_name: stop.stop_name,
+            stop_times: []
+          };
+
+        if(stop.distance > 1200) {
+          itemCallback();
+          return;
+        }
+
+        db.daily_stop_time.findAll({
+          where: {
+            stop_id: stop.stop_id
+          },
+          include: [{
             model: db.daily_trip,
             where: {
               start_datetime: {
@@ -65,40 +83,19 @@ var findStops = function(req, res) {
                 gte: moment(nowDate).subtract(config.tripEndPadding, 'minutes').toDate()
               }
             },
-            include: [
-              {
-                model: db.block_delay,
-                required: false
-              }
-            ]
-          }
-        ]
-      }
-    ],
-    order: [
-      [distanceAlias, 'ASC'],
-      [db.daily_stop_time, 'departure_datetime', 'ASC']
-    ]
-  }).then(function(stops) {
-    var stopsOut = [],
-      headsigns = [];
-
-    if(stops.length == 0) {
-      res.send({
-        success: false,
-        error: 'No nearby stops with active arrivals.  Please try again later.'
-      });
-    } else {
-      async.each(stops,
-        function(stop, itemCallback) {
-          var stopHeadsigns = [],
-            stopData = {
-              stop_name: stop.stop_name,
-              stop_times: []
-            };
-          
-          for (var i = 0; i < stop.daily_stop_times.length; i++) {
-            var curStopTime = stop.daily_stop_times[i],
+            include: [{
+              model: db.block_delay,
+              required: false
+            }]
+          }],
+          order: [
+            ['departure_datetime', 'ASC']
+          ],
+          //logging: console.log
+        }).then(function(daily_stop_times) {
+        
+          for (var i = 0; i < daily_stop_times.length; i++) {
+            var curStopTime = daily_stop_times[i],
               curTrip = curStopTime.daily_trip,
               delay = curTrip.block_delay ? curTrip.block_delay.seconds_of_delay : null,
               scheduledTripDepartureTime = moment(curStopTime.departure_datetime),
@@ -138,21 +135,22 @@ var findStops = function(req, res) {
           }
 
           itemCallback();
-        },
-        function(err) {
-          if(!err) {
-            res.send({
-              success: true,
-              stops: stopsOut
-            });
-          } else {
-            res.send({
-              success: false,
-              error: err
-            });
-          }
+
         });
-    }
+      },
+      function(err) {
+        if(!err) {
+          res.send({
+            success: true,
+            stops: stopsOut
+          });
+        } else {
+          res.send({
+            success: false,
+            error: err
+          });
+        }
+      });
   });
 
 }

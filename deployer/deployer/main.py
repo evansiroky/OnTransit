@@ -344,6 +344,7 @@ class Fab:
             cron_template = f.read()
             
         cron_settings = dict(cron_email=self.aws_conf.get('cron_email'),
+                             logfile=unix_path_join(self.data_dir, 'blockPurge.out'),
                              user=self.user,
                              ontransit_base_folder=self.ontransit_base_folder)
         cron = cron_template.format(**cron_settings)
