@@ -38,12 +38,13 @@ class Fab:
     ontransit_server_folder = unix_path_join(ontransit_base_folder, 'server')
     ontransit_web_folder = unix_path_join(ontransit_base_folder, 'web')
     
-    def __init__(self, user_type, host_name):
+    def __init__(self, user_type, host_name, ssh_sleep=10):
         '''Constructor for Class.  Sets up fabric environment.
         
         Args:
             user_type (string): the linux user type
             host_name (string): ec2 public dns name
+            ssh_sleep (int, default=10): number of seconds to sleep between ssh tries
         '''
         
         if user_type == 'root':
@@ -78,8 +79,8 @@ class Fab:
                 if num_retries > max_retries:
                     raise Exception('Maximum Number of SSH Retries Hit.  Did EC2 instance get configured with ssh correctly?')
                 num_retries += 1 
-                print('SSH failed (the system may still be starting up), waiting 10 seconds...')
-                time.sleep(10)
+                print('SSH failed (the system may still be starting up), waiting {0} seconds...'.format(ssh_sleep))
+                time.sleep(ssh_sleep)
         
     def test_cmd(self):
         '''A test command to see if everything is running ok.
@@ -229,17 +230,16 @@ class Fab:
         '''Installs node and npm.
         '''
         
-        sudo('yum -y install nodejs')
-        sudo('yum -y install npm')
+        # download and install from website instead of yum
+        run('wget https://nodejs.org/dist/latest/node-v4.0.0-linux-x64.tar.gz')
+        run('tar xzf node-v4.0.0-linux-x64.tar.gz -C /usr/local')
+        run('rm -rf node-v4.0.0-linux-x64.tar.gz')
+        run('mv /usr/local/node-v4.0.0-linux-x64 /usr/local/node')
+        run('ln -s /usr/local/node/bin/node /usr/bin/node')
+        run('ln -s /usr/local/node/bin/npm /usr/bin/npm')
         
         # install forever to run server continuously
-        sudo('npm install forever -g')
-        
-        '''Alternative download and install
-        run('wget https://nodejs.org/dist/latest/node-v4.0.0-linux-x64.tar.gz')
-        run('tar xzf node-v4.0.0-linux-x64.tar.gz')
-        run('rm -rf node-v4.0.0-linux-x64.tar.gz')
-        run('mv node-v4.0.0-linux-x64 node')'''
+        sudo('npm install forever -g')        
         
     def setup_iptables(self):
         '''Adds in iptables rules to forward 80 to 3000.
@@ -373,7 +373,7 @@ def get_aws_connection():
                                       aws_secret_access_key=aws_conf.get('aws_secret_access_key'))
     
     
-def get_fab(user_type, instance_dns_name=None):
+def get_fab(user_type, instance_dns_name=None, ssh_sleep=10):
     '''Get a instance of fabric deployer.
     
     Args:
@@ -388,7 +388,7 @@ def get_fab(user_type, instance_dns_name=None):
     if not instance_dns_name:
         instance_dns_name = input('Enter EC2 public dns name: ')
         
-    return Fab(user_type, instance_dns_name)
+    return Fab(user_type, instance_dns_name, ssh_sleep)
 
 
 def launch_new():
@@ -441,7 +441,7 @@ def launch_new():
         return None
     
     # setup regular user
-    fab = get_fab('root', instance.public_dns_name)
+    fab = get_fab('root', instance.public_dns_name, 60)
     fab.new_user()
     
     return instance.public_dns_name
@@ -638,6 +638,7 @@ def master():
     
     # setup new EC2 instance
     public_dns_name = launch_new()
+    #public_dns_name = input('dns_name')
     
     install_dependencies(public_dns_name)
     

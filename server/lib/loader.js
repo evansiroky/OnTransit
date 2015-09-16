@@ -37,6 +37,8 @@ module.exports = function(dbconfig, loaderCallback) {
     1000
   );
 
+  dailyStopTimeInserter.pause();
+
   var createAppModels = function(callback) {
     console.log('creating app models');
     db.block_delay.sync({ force: true }).then(function() {
@@ -279,21 +281,10 @@ module.exports = function(dbconfig, loaderCallback) {
           if(err) {
             callback(err);
           } else {
-            var dailyTripsDone = false,
-              dailyStopTimesDone = false,
-              insertersDoneCallback = function() {
-                if(dailyTripsDone && dailyStopTimesDone) {
-                  callback();
-                }
-              }
             dailyTripInserter.drain = function() {
-              dailyTripsDone = true;
-              insertersDoneCallback();
-            };
-
-            dailyStopTimeInserter.drain = function() {
-              dailyStopTimesDone = true;
-              insertersDoneCallback();
+              console.log('done inserting daily trips');
+              dailyStopTimeInserter.drain = callback
+              dailyStopTimeInserter.resume();
             };
           }
         }
