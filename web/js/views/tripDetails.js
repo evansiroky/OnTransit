@@ -21,6 +21,38 @@ module.exports = function(app) {
       'click #trip_details_feedback_app_button': 'sendAppFeedback'
     },
 
+    formatDelay: function(delay) {
+      // prettify seconds of delay into human readable format
+
+      if(delay === 0) {
+        return 'Vehicle is on time.';
+      }
+
+      if(delay === null) {
+        return 'Vehicle status unknown.';
+      }
+
+      var s = Math.abs(delay),
+        sec = s % 60,
+        m = ((s - sec) / 60) % 60,
+        h = (s - (m * 60) - sec) / 3600,
+        out = 'Vehicle is ';
+
+      if(h > 0) {
+        out += h + 'h ';
+      }
+
+      if(m > 0) {
+        out += m + 'm ';
+      }
+
+      if(sec > 0) {
+        out += sec + 's ';
+      }
+
+      return out + (delay > 0 ? 'late' : 'early') + '.';
+    },
+
     getTripStops: function() {
       util.getLocation(_.bind(this.geolocationSuccess, this), _.bind(this.geolocationError, this));
     },
@@ -75,6 +107,9 @@ module.exports = function(app) {
         tripStopListHTML += '<li data-role="list-divider">Past Stops</li>';
       }
 
+      $('#trip_details_delay').html(this.formatDelay(response.delay));
+      $('#trip_details_delay_details').html(response.delayMsg);
+
       collection.each(function(stop) {
 
         if(!pastUser && (stop.get('pastUser') === true)) {
@@ -90,8 +125,6 @@ module.exports = function(app) {
         var stopSecondsField = pastUser ? 'arrivalSeconds' : 'departureSeconds',
           stopSeconds = stop.get(stopSecondsField),
           stopTime = moment(tripBeginTime);
-
-        console.log(stopSeconds, tripBeginSeconds);
 
         stopTime.add(stopSeconds - tripBeginSeconds, 'seconds');
         stopCfg.scheduledTime = stopTime.format(timeFmt);

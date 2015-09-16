@@ -27,7 +27,7 @@ var validateTripJSON = validator({
   verbose: true
 });
 
-var findTrips = function(req, res, config) {
+var findTrips = function(req, res) {
   // find all trips close to a given lat/lon at the current datetime
   //var now = moment(),
   var now = moment(),
@@ -44,10 +44,10 @@ var findTrips = function(req, res, config) {
   db.daily_trip.findAll({
     where: {
       start_datetime: {
-        lte: moment(nowDate).add(10, 'minutes').toDate()
+        lte: moment(nowDate).add(config.tripStartPadding, 'minutes').toDate()
       },
       end_datetime: {
-        gte: moment(nowDate).subtract(30, 'minutes').toDate()
+        gte: moment(nowDate).subtract(config.tripEndPadding, 'minutes').toDate()
       }
     },
     include: [
