@@ -62,6 +62,19 @@ module.exports = function(app) {
     },
 
     geolocationSuccess: function(position) {
+
+      //after getting position, update feedback mailTo
+      var mailToOptions = {};
+      mailToOptions['Trip ID'] = app.curTripId;
+
+      util.reverseGeocode(app, position, function(addr) {
+        var mailTo = util.makeMailTo(mailToOptions, position, addr);
+        $('#trip_details_feedback_agency_button').attr('href', mailTo);
+        $('#feedback_agency_button').attr('href', mailTo);
+        app.views.feedback.mailToWithPosition = true;
+      });
+      
+      // fetch trip stops & calculate delay
       app.collections.tripStops.fetch({
         success: _.bind(this.renderTripStops, this),
         error: _.bind(this.getTripStopsError, this),
@@ -148,14 +161,14 @@ module.exports = function(app) {
     },
 
     sendAgencyFeedback: function() {
-      var mailToOptions = {};
-      mailToOptions['Trip ID'] = app.curTripId;
-      util.sendAgencyFeedback(app,
-        'Trip Details View', 
-        'Send Agency Feedback', 
-        'Trip Details View: Send Agency Feedback Button', 
-        mailToOptions
-      );
+      
+      analytics('send', {
+        hitType: 'event',          // Required.
+        eventCategory: 'Trip Details View',   // Required.
+        eventAction: 'Send Agency Feedback',      // Required.
+        eventLabel: 'Trip Details View: Send Agency Feedback Button'
+      });
+
     },
 
     sendAppFeedback: function() {

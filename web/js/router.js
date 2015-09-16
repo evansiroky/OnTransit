@@ -69,6 +69,7 @@ module.exports = function(app) {
         title: 'Feedback'
       });
       this.changePage('#feedback');
+      app.views.feedback.refreshAgencyFeedbackMailto();
     },
 
     about: function() {

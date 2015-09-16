@@ -37,6 +37,15 @@ module.exports = function(app) {
     },
 
     geolocationSuccess: function(position) {
+
+      // update feedback mailto with position
+      util.reverseGeocode(app, position, function(addr) {
+        var mailTo = util.makeMailTo({}, position, addr);
+        $('#feedback_agency_button').attr('href', mailTo);
+        app.views.feedback.mailToWithPosition = true;
+      });
+
+      // find nearby trips
       app.collections.trips.fetch({
         success: _.bind(this.renderTrips, this),
         error: _.bind(this.getTripsError, this),
