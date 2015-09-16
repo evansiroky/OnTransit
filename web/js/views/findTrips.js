@@ -106,7 +106,8 @@ module.exports = function(app) {
         tripList.push({
           distance: Math.round(trip.get('shape_gi').distance * 3.28084),
           id: idx,
-          timing: 'Start: ' + tripStart + '  End: ' + tripEnd,
+          start_time: tripStart,
+          end_time: tripEnd,
           route_name: route.route_short_name + ' - ' + route.route_long_name,
           trip_headsign: trip.get('trip_headsign')
         })

@@ -70,7 +70,8 @@
   "css_build": {
     "in_files": [
       "styles/resets.css",
-      "node_modules/jquery-mobile/dist/jquery.mobile.min.css"
+      "node_modules/jquery-mobile/dist/jquery.mobile.min.css",
+      "styles/OnTransit-jqm-theme.min.css"
     ],
     "out_file": "dist/main.css"
   },
