@@ -89,7 +89,7 @@ var tripService = function(app, _config) {
   config = _config;
   gtfsWorker = GTFSWorker(config.pgWeb);
 
-  app.get('/trips', function(req, res) {
+  app.get('/ws/trips', function(req, res) {
     var valid = validateTripJSON(req.query);
     if(!valid) {
       res.send(validateTripJSON.errors);

@@ -1,7 +1,7 @@
 var $ = require('jquery'),
   _ = require('underscore'),
   Backbone = require('backbone'),
-  moment = require('moment'),
+  moment = require('moment-timezone'),
   Mustache = require('mustache'),
   config = require('../config.js'),
   util = require('../util.js');
@@ -30,16 +30,15 @@ module.exports = function(app) {
     },
 
     geolocationSuccess: function(position) {
-      app.collections.stops.fetch({
+      app.collections.tripStops.fetch({
         success: _.bind(this.renderTripStops, this),
         error: _.bind(this.getTripStopsError, this),
         data: {
           accuracy: position.coords.accuracy,
           lat: position.coords.latitude,
           lon: position.coords.longitude,
-          trip_id: app.curTrip.get('trip_id'),
-          block_id: app.curTrip.get('block_id'),
-          trip_start_datetime: app.curTrip.get('start_datetime')
+          daily_trip_id: app.curDailyTripId,
+          daily_block_id: app.curDailyBlockId
         }
       });
     },
@@ -69,7 +68,7 @@ module.exports = function(app) {
       var tripStopListHTML = '',
         pastUser = false,
         timeFmt = 'h:mma',
-        tripBeginTime = moment(this.tripStartDatetime),
+        tripBeginTime = moment(response.trip_start_datetime),
         tripBeginSeconds = collection.at(0).get('departureSeconds');
 
       if(collection.at(0).get('pastUser') === false) {
@@ -91,6 +90,8 @@ module.exports = function(app) {
         var stopSecondsField = pastUser ? 'arrivalSeconds' : 'departureSeconds',
           stopSeconds = stop.get(stopSecondsField),
           stopTime = moment(tripBeginTime);
+
+        console.log(stopSeconds, tripBeginSeconds);
 
         stopTime.add(stopSeconds - tripBeginSeconds, 'seconds');
         stopCfg.scheduledTime = stopTime.format(timeFmt);
@@ -115,9 +116,7 @@ module.exports = function(app) {
 
     sendAgencyFeedback: function() {
       var mailToOptions = {};
-      mailToOptions['Trip ID'] = this.tripId;
-      mailToOptions['Trip Start DateTime'] = moment.tz(this.tripStartDatetime,
-        config.agencyTZ).format('LLLL');
+      mailToOptions['Trip ID'] = app.curTripId;
       util.sendAgencyFeedback(app,
         'Trip Details View', 
         'Send Agency Feedback', 

@@ -75,7 +75,10 @@ var findStops = function(req, res) {
         ]
       }
     ],
-    order: [[distanceAlias, 'ASC']]
+    order: [
+      [distanceAlias, 'ASC'],
+      [db.daily_stop_time, 'departure_datetime', 'ASC']
+    ]
   }).then(function(stops) {
     var stopsOut = [],
       headsigns = [];
@@ -88,15 +91,16 @@ var findStops = function(req, res) {
     } else {
       async.each(stops,
         function(stop, itemCallback) {
-          var stopData = {
+          var stopHeadsigns = [],
+            stopData = {
               stop_name: stop.stop_name,
-              headsigns: {}
+              stop_times: []
             };
           
           for (var i = 0; i < stop.daily_stop_times.length; i++) {
             var curStopTime = stop.daily_stop_times[i],
               curTrip = curStopTime.daily_trip,
-              delay = curTrip.block_delay ? curTrip.block_delay.delay : null,
+              delay = curTrip.block_delay ? curTrip.block_delay.seconds_of_delay : null,
               scheduledTripDepartureTime = moment(curStopTime.departure_datetime),
               actualTripDepartureTime = moment(curStopTime.departure_datetime);
 
@@ -109,22 +113,26 @@ var findStops = function(req, res) {
             if(stopTimeDiff > -config.nearbyStopPastPadding && 
                 stopTimeDiff < config.nearbyStopFuturePadding) {
 
-              if(!stopData.headsigns[curTrip.trip_headsign]) {
-                stopData.headsigns[curTrip.trip_headsign] = [];
+              if(stopHeadsigns.indexOf(curTrip.trip_headsign) == -1) {
+                stopHeadsigns.push(curTrip.trip_headsign);
               }
 
-              stopData.headsigns[curTrip.trip_headsign].push({
+              stopData.stop_times.push({
                 scheduled: scheduledTripDepartureTime,
                 actual: actualTripDepartureTime,
-                delay: delay
+                delay: delay,
+                daily_trip_id: curTrip.daily_trip_id,
+                daily_block_id: curTrip.daily_block_id,
+                trip_id: curTrip.trip_id,
+                trip_headsign: curTrip.trip_headsign
               });
 
             };
           };
 
-          var headsignCombo = Object.keys(stopData.headsigns).join();
+          var headsignCombo = stopHeadsigns.join();
 
-          if(headsigns.indexOf(headsignCombo) == -1) {
+          if(headsigns.indexOf(headsignCombo) == -1 && stopData.stop_times.length > 0) {
             stopsOut.push(stopData);
             headsigns.push(headsignCombo);
           }
@@ -154,7 +162,7 @@ var nearbyStopsService = function(app, _config) {
   config = _config;
   gtfsWorker = GTFSWorker(config.pgWeb);
 
-  app.get('/nearbyStops', function(req, res) {
+  app.get('/ws/nearbyStops', function(req, res) {
     var valid = validateTripJSON(req.query);
     if(!valid) {
       res.send(validateTripJSON.errors);

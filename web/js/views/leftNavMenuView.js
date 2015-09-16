@@ -6,6 +6,7 @@ module.exports = function(app) {
 
     events: {
       'click .left_nav_home': 'homeClick',
+      'click .left_nav_nearby_stops': 'nearbyStopsClick',
       'click .left_nav_find_trips': 'findTripsClick',
       'click .left_nav_feedback': 'feedbackClick'
     },
@@ -13,6 +14,11 @@ module.exports = function(app) {
     homeClick: function() {
       //console.log('homeClick');
       app.router.navigate('', { trigger: true });
+    },
+
+    nearbyStopsClick: function() {
+      //console.log('homeClick');
+      app.router.navigate('nearbyStops/', { trigger: true });
     },
 
     findTripsClick: function() {

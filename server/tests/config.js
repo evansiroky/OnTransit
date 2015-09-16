@@ -4,7 +4,7 @@ var config = {};
 config.crowdsourceDelay = true;
 
 // Trip Search Padding (in minutes)
-config.tripEndPadding = 180;
+config.tripEndPadding = 30;
 config.tripStartPadding = 10;
 
 // Nearby Stop Padding (in minutes)

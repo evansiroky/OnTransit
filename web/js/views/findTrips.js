@@ -65,8 +65,12 @@ module.exports = function(app) {
 
     onTransit: function() {
       $("#find_trips_confirm_onboard").popup('close');
-      var curTripIdx = parseInt(this.curTripTarget.attr('id').replace('trip_list_item_', ''), 10);
-      app.curTrip = app.collections.trips.at(curTripIdx);
+      var curTripIdx = parseInt(this.curTripTarget.attr('id').replace('trip_list_item_', ''), 10),
+        curTrip = app.collections.trips.at(curTripIdx);
+      console.log(curTrip);
+      app.curDailyTripId = curTrip.get('daily_trip_id');
+      app.curDailyBlockId = curTrip.get('daily_block_id');
+      app.curTripId = curTrip.get('trip_id');
       app.router.navigate('tripDetails/', { trigger: true });
     },
 

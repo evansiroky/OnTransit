@@ -41,7 +41,7 @@ describe('ontransit-server', function() {
     it('trips', function() {
 
       return rp({
-        uri: 'http://localhost:3000/trips',
+        uri: 'http://localhost:3000/ws/trips',
         qs: {
           lat: 42.3244775,
           lon: -122.870815
@@ -58,7 +58,7 @@ describe('ontransit-server', function() {
     it('tripStops - good accuracy', function() {
 
       return rp({
-        uri: 'http://localhost:3000/tripStops',
+        uri: 'http://localhost:3000/ws/tripStops',
         qs: {
           accuracy: 10,
           daily_trip_id: 1,
@@ -79,7 +79,7 @@ describe('ontransit-server', function() {
     it('tripStops - bad accuracy', function() {
 
       return rp({
-        uri: 'http://localhost:3000/tripStops',
+        uri: 'http://localhost:3000/ws/tripStops',
         qs: {
           accuracy: 1000,
           daily_trip_id: 1,
@@ -100,7 +100,7 @@ describe('ontransit-server', function() {
     it('nearbyStops', function() {
 
       return rp({
-        uri: 'http://localhost:3000/nearbyStops',
+        uri: 'http://localhost:3000/ws/nearbyStops',
         qs: {
           lat: 42.3244775,
           lon: -122.870815

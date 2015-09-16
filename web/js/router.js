@@ -11,6 +11,7 @@ module.exports = function(app) {
 
     routes: {
       "": "home",
+      "nearbyStops/": "nearbyStops",
       "findTrips/": "findTrips",
       "tripDetails/": "tripDetails",
       "feedback/": "feedback"
@@ -21,6 +22,12 @@ module.exports = function(app) {
       this.changePage('#home');
     },
 
+    nearbyStops: function() {
+      console.log('router nearbyStops');
+      this.changePage('#nearby_stops');
+      app.views.nearbyStops.locateNearbyStops();
+    },
+
     findTrips: function() {
       // console.log('router findTrips');
       this.changePage('#find_trips');
@@ -29,7 +36,7 @@ module.exports = function(app) {
 
     tripDetails: function() {
       // console.log('router tripDetails');
-      if(app.curTrip) {
+      if(app.curDailyTripId) {
         this.changePage('#trip_details');
         app.views.tripDetails.getTripStops();
       } else {

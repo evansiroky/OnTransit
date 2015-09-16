@@ -5,7 +5,7 @@ var fs = require('fs'),
 
 // check if this file was invoked direct through command line or required as an export
 var invocation = (require.main === module) ? 'direct' : 'required',
-  backboneRoutes = ['/', '/findTrips', '/tripDetails', '/tripDetails/:id', '/feedback'];
+  backboneRoutes = ['/', '/nearbyStops', '/findTrips', '/tripDetails', '/feedback'];
 
 var main = function(config, callback) {
   

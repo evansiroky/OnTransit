@@ -346,7 +346,8 @@ var applyDelay = function(req, res, tripStartDatetime, userLocationLineFraction,
     success: true,
     stops: stops,
     delay: delay,
-    delayMsg: delayMsg
+    delayMsg: delayMsg,
+    trip_start_datetime: tripDate
   });
 }
 
@@ -355,7 +356,7 @@ var tripStopService = function(app, _config) {
   config = _config;
   gtfsWorker = GTFSWorker(config.pgWeb);
 
-  app.get('/tripStops', function(req, res) {
+  app.get('/ws/tripStops', function(req, res) {
     if(req.query.daily_block_id) { req.query.daily_block_id = '' + req.query.daily_block_id; }
     var valid = validateTripStopsJSON(req.query);
     if(!valid) {
