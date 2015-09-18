@@ -231,7 +231,7 @@ class Fab:
         '''
         
         # download and install from website instead of yum
-        run('wget https://nodejs.org/dist/latest/node-v4.0.0-linux-x64.tar.gz')
+        run('wget https://nodejs.org/dist/v4.0.0/node-v4.0.0-linux-x64.tar.gz')
         run('tar xzf node-v4.0.0-linux-x64.tar.gz -C /usr/local')
         run('rm -rf node-v4.0.0-linux-x64.tar.gz')
         run('mv /usr/local/node-v4.0.0-linux-x64 /usr/local/node')
@@ -274,12 +274,17 @@ class Fab:
                            pg_web_password=self.ontransit_conf.get('pg_web_password'),
                            trip_end_padding=self.ontransit_conf.get('trip_end_padding'),
                            trip_start_padding=self.ontransit_conf.get('trip_start_padding'))
-        put(write_template(server_data, 
-                           'server_config_index.js', 
-                           'index.js'), 
-            unix_path_join(self.ontransit_server_folder, 'config'))
         
         with(cd(self.ontransit_server_folder)):
+
+            # create config dir and upload file
+            run('mkdir config')
+
+            put(write_template(server_data, 
+                               'server_config_index.js', 
+                               'index.js'),
+                'config')
+
             # install npm stuff
             run('npm install')
             
@@ -588,7 +593,7 @@ def validate_gtfs():
     return gtfs_validated
 
 
-def update_gtfs(instance_dns_name=None, validate=False):
+def update_gtfs(instance_dns_name=None, validate=True):
     '''Update the gtfs file on the EC2 instance and tell OnTransit to load the latest gtfs.
     
     This assumes that OnTransit has been installed on the server.
@@ -634,19 +639,18 @@ def master():
     '''
     
     # dl gtfs and validate it
-    '''if not validate_gtfs():
-        raise Exception('GTFS Validation Failed')'''
+    if not validate_gtfs():
+        raise Exception('GTFS Validation Failed')
     
     # setup new EC2 instance
     public_dns_name = launch_new()
-    #public_dns_name = input('dns_name')
     
     install_dependencies(public_dns_name)
     
     # install OBA
     install_ontransit(public_dns_name)
     
-    # update GTFS, make new bundle
+    # update GTFS, instruct OnTransit to load in new data
     update_gtfs(public_dns_name, False)
     
     # start server
