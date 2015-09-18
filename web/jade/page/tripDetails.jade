@@ -11,6 +11,9 @@
     ul#trip_details_stop_list(data-role='listview')
 
   div(data-role="footer" data-position="fixed")
+    #trip_details_delay_container
+      p#trip_details_delay
+      p#trip_details_delay_details
     div(data-role="navbar")
       ul
         li
@@ -26,5 +29,5 @@
   #trip_details_feedback(data-role='popup' data-dismissable='false')
     .ui-content
       p Select the type of feedback you want to submit:
-      button#trip_details_feedback_agency_button.ui-btn.ui-icon-bus.ui-btn-icon-left Transit Service Feedback
-      button#trip_details_feedback_app_button.ui-btn.ui-icon-screen.ui-btn-icon-left App Feedback
+      a#trip_details_feedback_agency_button.ui-btn.ui-icon-bus.ui-btn-icon-left Transit Service Feedback
+      a#trip_details_feedback_app_button.ui-btn.ui-icon-screen.ui-btn-icon-left App Feedback

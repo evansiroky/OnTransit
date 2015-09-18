@@ -2,7 +2,7 @@ var validator = require('is-my-json-valid'),
   moment = require('moment-timezone'),
   GTFSWorker = require('../lib/gtfsWorker.js'),
   util = require('../lib/util.js'),
-  gtfsWorker;
+  config, gtfsWorker;
 
 var validateTripJSON = validator({
   type: 'object',
@@ -44,10 +44,10 @@ var findTrips = function(req, res) {
   db.daily_trip.findAll({
     where: {
       start_datetime: {
-        lte: moment(nowDate).add(10, 'minutes').toDate()
+        lte: moment(nowDate).add(config.tripStartPadding, 'minutes').toDate()
       },
       end_datetime: {
-        gte: moment(nowDate).subtract(30, 'minutes').toDate()
+        gte: moment(nowDate).subtract(config.tripEndPadding, 'minutes').toDate()
       }
     },
     include: [
@@ -84,11 +84,12 @@ var findTrips = function(req, res) {
   
 };
 
-var tripService = function(app, config) {
+var tripService = function(app, _config) {
 
+  config = _config;
   gtfsWorker = GTFSWorker(config.pgWeb);
 
-  app.get('/trips', function(req, res) {
+  app.get('/ws/trips', function(req, res) {
     var valid = validateTripJSON(req.query);
     if(!valid) {
       res.send(validateTripJSON.errors);

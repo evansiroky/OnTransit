@@ -6,7 +6,12 @@ module.exports = function(app) {
     el: '#home',
 
     events: {
+      'click #home_find_stops_button': 'findStopsClick',
       'click #home_find_trips_button': 'findTripsClick'
+    },
+
+    findStopsClick: function() {
+      app.router.navigate('nearbyStops/', { trigger: true });
     },
 
     findTripsClick: function() {

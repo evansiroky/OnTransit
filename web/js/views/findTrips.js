@@ -37,6 +37,15 @@ module.exports = function(app) {
     },
 
     geolocationSuccess: function(position) {
+
+      // update feedback mailto with position
+      util.reverseGeocode(app, position, function(addr) {
+        var mailTo = util.makeMailTo({}, position, addr);
+        $('#feedback_agency_button').attr('href', mailTo);
+        app.views.feedback.mailToWithPosition = true;
+      });
+
+      // find nearby trips
       app.collections.trips.fetch({
         success: _.bind(this.renderTrips, this),
         error: _.bind(this.getTripsError, this),
@@ -65,8 +74,12 @@ module.exports = function(app) {
 
     onTransit: function() {
       $("#find_trips_confirm_onboard").popup('close');
-      var curTripIdx = parseInt(this.curTripTarget.attr('id').replace('trip_list_item_', ''), 10);
-      app.curTrip = app.collections.trips.at(curTripIdx);
+      var curTripIdx = parseInt(this.curTripTarget.attr('id').replace('trip_list_item_', ''), 10),
+        curTrip = app.collections.trips.at(curTripIdx);
+      console.log(curTrip);
+      app.curDailyTripId = curTrip.get('daily_trip_id');
+      app.curDailyBlockId = curTrip.get('daily_block_id');
+      app.curTripId = curTrip.get('trip_id');
       app.router.navigate('tripDetails/', { trigger: true });
     },
 
@@ -102,7 +115,8 @@ module.exports = function(app) {
         tripList.push({
           distance: Math.round(trip.get('shape_gi').distance * 3.28084),
           id: idx,
-          timing: 'Start: ' + tripStart + '  End: ' + tripEnd,
+          start_time: tripStart,
+          end_time: tripEnd,
           route_name: route.route_short_name + ' - ' + route.route_long_name,
           trip_headsign: trip.get('trip_headsign')
         })

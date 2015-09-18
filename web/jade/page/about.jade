@@ -1,0 +1,36 @@
+#about(data-role='page')
+  div(data-role='header')
+    a.ui-btn-icon-left(data-icon='bars', href='#about_left_nav_panel') Menu
+    h1 OnTransit
+
+  div#about_left_nav_panel.left_nav_panel(data-role="panel")
+    include ../widget/leftPanel.jade
+  
+  div(data-role="main" class="ui-content about_content")
+    h3 What is OnTransit?
+    
+    p.instructions OnTransit is a demo app that crowdsources vehicle positions 
+      | and real-time arrivals from users of this website.  
+      | Currently this app is only available for the San Jose VTA transit agency.
+    
+    h3 The Nearby Stops Page
+
+    p.instructions Use this page to find nearby stops and the vehicles departing from them.  
+      | If the actual time has a check mark (✓), someone has reported the position of the vehicle.
+      | If the actual time has some question marks (??), no on-time information is available.
+
+    h3 The Find Trips Page
+
+    p.instructions Use this screen to find an exact trip to say you are riding.  
+      | They are organized by distance to you.  
+      | If you're not sure you're picking the right trip, try using the nearby stops page instead.
+
+    h3 The Trip Details Page
+
+    p.instructions When viewing this screen, you are reporting your position to our servers 
+      | with the assumption that your position is the current position of the transit vehicle.
+
+    h3 OnTransit is open-source!
+
+    p.instructions View the OnTransit project on #[a(href="https://github.com/djstroky/OnTransit") github].
+    

@@ -12,10 +12,12 @@ module.exports = function(app) {
     },
 
     agencyFeedback: function() {
-      util.sendAgencyFeedback(app,
-        'Feedback View', 
-        'Send Agency Feedback', 
-        'Feedback View: Send Agency Feedback Button');
+      analytics('send', {
+        hitType: 'event',          // Required.
+        eventCategory: 'Feedback View',   // Required.
+        eventAction: 'Send Agency Feedback',      // Required.
+        eventLabel: 'Feedback View: Send Agency Feedback Button'
+      });
     },
 
     appFeedback: function() {
@@ -27,6 +29,13 @@ module.exports = function(app) {
     initialize: function() {
       var menuView = require('./leftNavMenuView.js')(app);
       this.menuView = new menuView({el: '#feedback .left_nav_panel'});
+      this.mailToWithPosition = false;
+    },
+
+    refreshAgencyFeedbackMailto: function(mailToOptions) {
+      if(!this.mailToWithPosition) {
+        util.updateMailToTarget(app, '#feedback_agency_button');
+      }
     }
 
   });

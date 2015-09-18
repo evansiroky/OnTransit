@@ -19,6 +19,7 @@
     "jquery": "^2.1.4",
     "jquery-mobile": "^1.4.1",
     "moment": "^2.10.6",
+    "moment-timezone": "^0.4.0",
     "mustache": "^2.1.3",
     "rimraf": "^2.3.4",
     "stylus": "^0.51.1",
@@ -69,7 +70,8 @@
   "css_build": {
     "in_files": [
       "styles/resets.css",
-      "node_modules/jquery-mobile/dist/jquery.mobile.min.css"
+      "node_modules/jquery-mobile/dist/jquery.mobile.min.css",
+      "styles/OnTransit-jqm-theme.min.css"
     ],
     "out_file": "dist/main.css"
   },

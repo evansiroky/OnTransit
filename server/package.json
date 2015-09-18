@@ -4,7 +4,8 @@
   "description": "Server for OnTransit mobile website.",
   "main": "index.js",
   "scripts": {
-    "load-gtfs": "node scripts/load.js",
+    "load-gtfs": "node --max-old-space-size=7168 scripts/load.js",
+    "purgeBlockDelay": "node scripts/blockDelayPurger.js",
     "test-all": "npm run test-db-load && npm run test-webservices",
     "test-db-load": "mocha tests/testLoad.js",
     "test-webservices": "mocha tests/testWebservices.js"

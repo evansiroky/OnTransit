@@ -5,13 +5,24 @@ module.exports = function(dbconfig) {
   var worker = GTFS(dbconfig);
   worker.getConnection = function() {
     var db = worker.connectToDatabase(),
+      BlockDelay = db.sequelize.import('../models/blockDelay.js'),
       DailyTrip = db.sequelize.import('../models/dailyTrip.js'),
-      TripDelay = db.sequelize.import('../models/tripDelay.js');
+      DailyStopTime = db.sequelize.import('../models/dailyStopTime.js');
+
     db.daily_trip = DailyTrip;
-    db.trip_delay = TripDelay;
+    db.daily_stop_time = DailyStopTime;
+    db.block_delay = BlockDelay;
 
     db.shape_gis.hasMany(db.daily_trip, {
       foreignKey: 'shape_id'
+    });
+
+    db.stop_time.hasMany(db.daily_trip, {
+      foreignKey: 'trip_id'
+    });
+
+    db.stop.hasMany(db.daily_stop_time, {
+      foreignKey: 'stop_id'
     });
 
     Object.keys(db).forEach(function(modelName) {

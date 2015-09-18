@@ -1,0 +1,28 @@
+#nearby_stops(data-role='page')
+  div(data-role='header')
+    a.ui-btn-icon-left(data-icon='bars', href='#nearby_stops_left_nav_panel') Menu
+    h1 Nearby Stops
+
+  div#nearby_stops_left_nav_panel.left_nav_panel(data-role='panel')
+    include ../widget/leftPanel.jade
+
+  .ui-content(data-role='main')
+    p#nearby_stops_progress Finding stops...
+    button#nearby_stops_locate_button.ui-btn.ui-icon-location.ui-btn-icon-left Locate Nearby Stops
+    .page_wide_header
+      h2 Nearby Stops
+    ul#nearby_stop_list(data-role='listview')
+
+  #nearby_stops_problem(data-role='popup' data-dismissable='false')
+    .ui-content
+      p#nearby_stops_error_message
+      a.ui-btn.ui-corner-all.ui-shadow.ui-btn-inline(data-rel='back') OK
+
+  #nearby_stops_confirm_onboard(data-role='popup' data-dismissable='false')
+    .ui-content
+      p.confirm_main_point Are you on this transit vehicle?  
+      p.confirm_tldr By clicking yes, you are agreeing to use your device's location to calculate how early or late this vehicle is.  Other people will then be able to know how early or late this transit trip is.
+      a#nearby_stops_yes_on_vehicle_button.ui-btn.ui-corner-all.ui-shadow.ui-btn-inline Yes
+      a#nearby_stops_not_on_vehicle_button.ui-btn.ui-corner-all.ui-shadow.ui-btn-inline No
+
+    

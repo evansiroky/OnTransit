@@ -3,5 +3,5 @@ script#tripListItemTemplate(type='text/tempalte')
     li.trip_list_item(id='trip_list_item_{{id}}')
       a
         h2 {{trip_headsign}}
-        p {{timing}}
-        p Distance: {{distance}} feet
+        p #[b Start: ] {{start_time}} #[b End: ] {{end_time}}
+        p #[b Distance: ] {{distance}} feet

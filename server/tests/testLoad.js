@@ -3,7 +3,7 @@ var Q = require('q'),
   loader = require('../lib/loader.js');
 
 describe('ontransit-db-download', function() {
-  this.timeout(60000);
+  this.timeout(180000);
 
   it('should download', function() {
     var promise = function() {

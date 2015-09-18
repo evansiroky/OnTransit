@@ -38,12 +38,13 @@ class Fab:
     ontransit_server_folder = unix_path_join(ontransit_base_folder, 'server')
     ontransit_web_folder = unix_path_join(ontransit_base_folder, 'web')
     
-    def __init__(self, user_type, host_name):
+    def __init__(self, user_type, host_name, ssh_sleep=10):
         '''Constructor for Class.  Sets up fabric environment.
         
         Args:
             user_type (string): the linux user type
             host_name (string): ec2 public dns name
+            ssh_sleep (int, default=10): number of seconds to sleep between ssh tries
         '''
         
         if user_type == 'root':
@@ -78,8 +79,8 @@ class Fab:
                 if num_retries > max_retries:
                     raise Exception('Maximum Number of SSH Retries Hit.  Did EC2 instance get configured with ssh correctly?')
                 num_retries += 1 
-                print('SSH failed (the system may still be starting up), waiting 10 seconds...')
-                time.sleep(10)
+                print('SSH failed (the system may still be starting up), waiting {0} seconds...'.format(ssh_sleep))
+                time.sleep(ssh_sleep)
         
     def test_cmd(self):
         '''A test command to see if everything is running ok.
@@ -229,17 +230,17 @@ class Fab:
         '''Installs node and npm.
         '''
         
-        sudo('yum -y install nodejs')
-        sudo('yum -y install npm')
+        # download and install from website instead of yum
+        run('wget https://nodejs.org/dist/v4.0.0/node-v4.0.0-linux-x64.tar.gz')
+        run('tar xzf node-v4.0.0-linux-x64.tar.gz -C /usr/local')
+        run('rm -rf node-v4.0.0-linux-x64.tar.gz')
+        run('mv /usr/local/node-v4.0.0-linux-x64 /usr/local/node')
+        run('ln -s /usr/local/node/bin/node /usr/bin/node')
+        run('ln -s /usr/local/node/bin/npm /usr/bin/npm')
         
         # install forever to run server continuously
         sudo('npm install forever -g')
-        
-        '''Alternative download and install
-        run('wget https://nodejs.org/dist/latest/node-v4.0.0-linux-x64.tar.gz')
-        run('tar xzf node-v4.0.0-linux-x64.tar.gz')
-        run('rm -rf node-v4.0.0-linux-x64.tar.gz')
-        run('mv node-v4.0.0-linux-x64 node')'''
+        sudo('ln -s /usr/local/node/bin/forever /usr/bin/forever')   
         
     def setup_iptables(self):
         '''Adds in iptables rules to forward 80 to 3000.
@@ -263,17 +264,27 @@ class Fab:
         
         # upload server config
         server_data = dict(gtfs_static_url=self.gtfs_conf.get('gtfs_static_url'),
+                           block_delay_delete_threshold=self.ontransit_conf.get('block_delay_delete_threshold'),
                            database_name=self.ontransit_conf.get('database_name'),
+                           nearby_stop_future_padding=self.ontransit_conf.get('nearby_stop_future_padding'),
+                           nearby_stop_past_padding=self.ontransit_conf.get('nearby_stop_past_padding'),
                            pg_worker_username=self.ontransit_conf.get('pg_worker_username'),
                            pg_worker_password=self.ontransit_conf.get('pg_worker_password'),
                            pg_web_username=self.ontransit_conf.get('pg_web_username'),
-                           pg_web_password=self.ontransit_conf.get('pg_web_password'))
-        put(write_template(server_data, 
-                           'server_config_index.js', 
-                           'index.js'), 
-            unix_path_join(self.ontransit_server_folder, 'config'))
+                           pg_web_password=self.ontransit_conf.get('pg_web_password'),
+                           trip_end_padding=self.ontransit_conf.get('trip_end_padding'),
+                           trip_start_padding=self.ontransit_conf.get('trip_start_padding'))
         
         with(cd(self.ontransit_server_folder)):
+
+            # create config dir and upload file
+            run('mkdir config')
+
+            put(write_template(server_data, 
+                               'server_config_index.js', 
+                               'index.js'),
+                'config')
+
             # install npm stuff
             run('npm install')
             
@@ -314,10 +325,6 @@ class Fab:
         '''Install cron scripts to make sure ontransit data is up-to-date.
         '''
         
-        # prepare update script
-        refresh_settings = dict(user=self.user,
-                                ontransit_base_folder=self.ontransit_base_folder)
-        
         # check if script folder exists
         if not exists(self.script_dir):
             run('mkdir {0}'.format(self.script_dir))
@@ -328,15 +335,27 @@ class Fab:
             
         # prepare nightly update cron script
         with open(os.path.join(CONFIG_TEMPLATE_DIR, 'gtfs_refresh_crontab')) as f:
-            refresh_cron_template = f.read()
+            cron_template = f.read()
             
         cron_settings = dict(cron_email=self.aws_conf.get('cron_email'),
                              logfile=unix_path_join(self.data_dir, 'nightly_refresh.out'),
                              user=self.user,
                              ontransit_base_folder=self.ontransit_base_folder)
-        gtfs_refresh_cron = refresh_cron_template.format(**cron_settings)
+        cron = cron_template.format(**cron_settings)
             
-        crontab_update(gtfs_refresh_cron, 'gtfs_refresh_cron')
+        crontab_update(cron, 'gtfs_refresh_cron')
+        
+        # prepare block delay purge cron script
+        with open(os.path.join(CONFIG_TEMPLATE_DIR, 'block_delay_purge_crontab')) as f:
+            cron_template = f.read()
+            
+        cron_settings = dict(cron_email=self.aws_conf.get('cron_email'),
+                             logfile=unix_path_join(self.data_dir, 'blockPurge.out'),
+                             user=self.user,
+                             ontransit_base_folder=self.ontransit_base_folder)
+        cron = cron_template.format(**cron_settings)
+            
+        crontab_update(cron, 'block_delay_purge_cron')
         
     def stop_server(self):
         '''Stops the OnTransit server.
@@ -360,7 +379,7 @@ def get_aws_connection():
                                       aws_secret_access_key=aws_conf.get('aws_secret_access_key'))
     
     
-def get_fab(user_type, instance_dns_name=None):
+def get_fab(user_type, instance_dns_name=None, ssh_sleep=10):
     '''Get a instance of fabric deployer.
     
     Args:
@@ -375,7 +394,7 @@ def get_fab(user_type, instance_dns_name=None):
     if not instance_dns_name:
         instance_dns_name = input('Enter EC2 public dns name: ')
         
-    return Fab(user_type, instance_dns_name)
+    return Fab(user_type, instance_dns_name, ssh_sleep)
 
 
 def launch_new():
@@ -428,7 +447,7 @@ def launch_new():
         return None
     
     # setup regular user
-    fab = get_fab('root', instance.public_dns_name)
+    fab = get_fab('root', instance.public_dns_name, 60)
     fab.new_user()
     
     return instance.public_dns_name
@@ -574,7 +593,7 @@ def validate_gtfs():
     return gtfs_validated
 
 
-def update_gtfs(instance_dns_name=None, validate=False):
+def update_gtfs(instance_dns_name=None, validate=True):
     '''Update the gtfs file on the EC2 instance and tell OnTransit to load the latest gtfs.
     
     This assumes that OnTransit has been installed on the server.
@@ -620,8 +639,8 @@ def master():
     '''
     
     # dl gtfs and validate it
-    '''if not validate_gtfs():
-        raise Exception('GTFS Validation Failed')'''
+    if not validate_gtfs():
+        raise Exception('GTFS Validation Failed')
     
     # setup new EC2 instance
     public_dns_name = launch_new()
@@ -631,7 +650,7 @@ def master():
     # install OBA
     install_ontransit(public_dns_name)
     
-    # update GTFS, make new bundle
+    # update GTFS, instruct OnTransit to load in new data
     update_gtfs(public_dns_name, False)
     
     # start server
