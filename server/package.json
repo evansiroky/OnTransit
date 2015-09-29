@@ -17,13 +17,15 @@
   "license": "MIT",
   "dependencies": {
     "async": "^1.4.2",
+    "db-streamer": "^0.3.3",
     "express": "^4.13.3",
-    "gtfs-sequelize": "^0.3.0",
+    "gtfs-sequelize": "^0.3.3",
     "is-my-json-valid": "^2.12.1",
     "js-priority-queue": "^0.1.2",
     "moment": "^2.10.6",
     "moment-timezone": "^0.4.0",
     "pg": "^4.4.1",
+    "pg-copy-streams": "^0.3.0",
     "pg-hstore": "^2.3.2",
     "query-types": "^0.1.4"
   },

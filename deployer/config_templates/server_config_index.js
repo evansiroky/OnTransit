@@ -18,7 +18,7 @@ config.nearbyStopPastPadding = {nearby_stop_past_padding};
 config.pgWorker = {{
   gtfsUrl: '{gtfs_static_url}',
   downloadsDir: 'downloads',
-  gtfsFilename: 'google_transit.zip',
+  gtfsFileOrFolder: 'google_transit.zip',
   database: 'postgres://{pg_worker_username}:{pg_worker_password}@localhost:5432/{database_name}',
   isPostGIS: true,
   workerUserName: '{pg_worker_username}',

@@ -463,7 +463,7 @@ def install_dependencies(instance_dns_name=None):
     print('SSH working')
     root_fab.update_system()
     root_fab.install_helpers()
-    root_fab.install_custom_monitoring()
+    #root_fab.install_custom_monitoring()  # apparently only works with Amazon Linux
     root_fab.set_timezone()
     root_fab.install_pg()
     root_fab.install_git()
