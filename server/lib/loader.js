@@ -105,11 +105,18 @@ module.exports = function(dbconfig, loaderCallback) {
 
     for (var i = 0; i < days.length; i++) {
       var dayValid = false,
-        dayOfWeek = days[i].format('dddd').toLowerCase();
+        curDay = days[i],
+        dayOfWeek = curDay.format('dddd').toLowerCase();
 
       // check regular calendar
       if(calendarDate[dayOfWeek]) {
         dayValid = true;
+      }
+
+      // ensure day is within service range
+      if(moment(calendarDate.start_date).isAfter(curDay) ||
+         moment(calendarDate.end_date).isBefore(curDay)) {
+        dayValid = false;
       }
 
       // check for any exceptions
@@ -260,6 +267,7 @@ module.exports = function(dbconfig, loaderCallback) {
     today.set('hour', 0);
     today.set('minute', 0);
     today.set('second', 0);
+    today.set('millisecond', 0);
 
     var yesterday = moment(today).subtract(1, 'days'),
       tomorrow = moment(today).add(1, 'days'),
@@ -307,9 +315,7 @@ module.exports = function(dbconfig, loaderCallback) {
       serviceQueue.pause();
 
       for (var i = 0; i < calendarDates.length; i++) {
-        serviceQueue.push(calendarDates[i], function(a, b, c) {
-          console.log('service queue item finished', a, b, c);
-        });
+        serviceQueue.push(calendarDates[i]);
       };
 
       serviceQueue.drain = function() {
