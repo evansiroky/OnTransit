@@ -20,7 +20,7 @@ config.pgWorker = {
   downloadsDir: 'downloads',
   gtfsFilename: 'google_transit.zip',
   database: 'postgres://test_worker:password@localhost:5432/ontransit-test',
-  isPostGIS: true,
+  spatial: true,
   workerUserName: 'test_worker',
   webUsername: 'test_web',
   sequelizeOptions: {
@@ -30,7 +30,7 @@ config.pgWorker = {
 
 config.pgWeb = {
   database: 'postgres://test_web:password@localhost:5432/ontransit-test',
-  isPostGIS: true,
+  spatial: true,
   sequelizeOptions: {
     logging: false
   }

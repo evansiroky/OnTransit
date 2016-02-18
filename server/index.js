@@ -17,7 +17,7 @@ var main = function(config, callback) {
   
   app.use(queryType.middleware())
 
-  require('./routes')(app, config);
+  require('./routes')(app, config)
 
   var server = app.listen(3000, function () {
     var host = server.address().address;

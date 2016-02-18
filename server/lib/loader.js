@@ -25,6 +25,18 @@ module.exports = function(dbconfig, loaderCallback) {
 
   var dailyTripInserter, dailyStopTimeInserter, serviceQueue;
 
+  var dropAppModels = function(dropCallback) {
+    async.eachSeries([db.block_delay, db.daily_stop_time, db.daily_trip],
+      function(model, modelCallback) {
+        model.drop().then(modelCallback);
+      },
+      function(err) {
+        console.log('tables dropped');
+        dropCallback(err);
+      }
+    );
+  };
+
   var createAppModels = function(callback) {
     console.log('creating app models');
     db.block_delay.sync({ force: true }).then(function() {
@@ -379,6 +391,7 @@ module.exports = function(dbconfig, loaderCallback) {
       function(cb) {
         gtfsWorker.downloadGtfs(cb)
       },
+      dropAppModels,
       function(cb) {
         gtfsWorker.loadGtfs(cb);
       },
